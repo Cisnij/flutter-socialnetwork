@@ -135,7 +135,7 @@ class _FriendSuggestScreenState extends State<FriendSuggestScreen> {
                                         // reload cache cho chắc
                                         session.clear();
                                         await session.init();
-                                        setState(() {});
+                                        setState(() {}); // khoi tao lai
                                       }
                                     },
                                     child: const Text('Chấp nhận'),
@@ -157,9 +157,9 @@ class _FriendSuggestScreenState extends State<FriendSuggestScreen> {
                                 return ElevatedButton(
                                   onPressed: () async {
                                     final ok = await _friendController
-                                        .sendRequest(id!);
+                                        .sendRequest(id!); // gọi send request khi nhấn 
                                     if (ok && mounted) {
-                                      session.sentRequestIds.add(id);
+                                      session.sentRequestIds.add(id); // thêm id vào cache luôn 
                                       setState(() {});
                                     }
                                   },

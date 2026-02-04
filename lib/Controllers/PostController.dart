@@ -18,17 +18,15 @@ class PostController{
   }
 
 
-Future<PostModel> modifyPost(int id, String title) async { // sửa post
-  final model = PostModel(title: title);
-  final res = await _service.modifyPost(id, model.toJson());
+Future<bool> delPost(int id) async { // sửa post
+  final res = await _service.delPost(id,);
 
-  if (res.statusCode == 200 || res.statusCode == 201) {
-    final data = jsonDecode(res.body);
-    return PostModel.fromJson(data);
-  } else {
-    throw Exception('Xảy ra lỗi');
+  if (res.statusCode == 200 || res.statusCode == 204) {
+    return true;
   }
+  return false;
 }
+
 
   
 Future<List<PostModel>> getFeed() async {

@@ -9,7 +9,7 @@ Future<String?> refreshAccessToken() async {
   if (refreshToken == null) return null;
 
   final url = Uri.parse(
-    'http://localhost:8000/api/auth/token/refresh/',
+    'http://10.0.2.2:8000/api/auth/token/refresh/',
   );
 
   final response = await http.post(
@@ -122,6 +122,38 @@ Future<http.Response> authPut({
     } else {
       await TokenStorage.clear();
       throw Exception("Session expired. Please login again.");
+    }
+  }
+
+  return response;
+}
+//============================ DELETE =====================================
+Future<http.Response> authDelete({
+  required String url,
+  bool retry = true,
+}) async {
+  final accessToken = await TokenStorage.getAccessToken();
+
+  final response = await http.delete(
+    Uri.parse(url),
+    headers: {
+      "Content-Type": "application/json",
+      if (accessToken != null)
+        "Authorization": "Bearer $accessToken",
+    },
+  );
+
+  if (response.statusCode == 401 && retry) {
+    final newAccess = await refreshAccessToken();
+
+    if (newAccess != null) {
+      return authDelete(
+        url: url,
+        retry: false,
+      );
+    } else {
+      await TokenStorage.clear();
+      throw Exception("SESSION_EXPIRED");
     }
   }
 

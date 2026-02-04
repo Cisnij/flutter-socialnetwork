@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_app/Controllers/PostController.dart';
 import 'package:my_app/Models/PostModel.dart';
 import 'package:my_app/Models/UserModel.dart';
 import 'package:my_app/Controllers/FunctionController.dart';
@@ -6,13 +7,16 @@ import 'package:my_app/Views/Screens/profile.dart';
 
 class PostItem extends StatefulWidget {
   final PostModel post;
+  final VoidCallback? onDelete; // thêm callback để xóa post khỏi UI cha
 
   /// Gọi controller xử lý like tim...
   final FunctionController _functionController = FunctionController();
+  final PostController _postController = PostController();
 
   PostItem({ //truyền dữ liệu từ home vào
     super.key,
     required this.post,
+    this.onDelete,
   });
 
   @override
@@ -106,7 +110,7 @@ class _PostItemState extends State<PostItem> {
                 IconButton(
                   icon: const Icon(Icons.more_horiz), //icon 3 chấm setting
                   onPressed: () {
-                    // TODO: bottom sheet (edit / delete / report)
+                    _showPostActions(context);
                   },
                 ),
               ],
@@ -207,6 +211,44 @@ class _PostItemState extends State<PostItem> {
         ),
       ),
     );
+  }
+
+  void _showPostActions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.delete, color: Colors.red),
+              title: const Text(
+                'Xóa bài viết',
+                style: TextStyle(color: Colors.red),
+              ),
+              onTap: () async {
+                Navigator.pop(context);
+                await _deletePost(context); // goij hàm xóa
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _deletePost(BuildContext context) async {
+    try {
+      await widget._postController.delPost(post.id!);
+      widget.onDelete?.call(); // gọi lại xóa post khỏi list trong thằng feed cha và load lại, nếu không null sẽ chạy, null thì k chạy.// Logic là ấn xóa, gọi api xóa, gọi ondelete.call() tới th cha, th cha lấy id post và xóa ui 
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã xóa bài viết')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Xóa bài viết thất bại ')),
+      );
+    }
   }
 
   /// ===============================================================

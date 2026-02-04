@@ -3,6 +3,7 @@ import 'package:my_app/Views/Screens/addfriend.dart';
 import 'package:my_app/Views/Screens/profile.dart';
 import 'package:my_app/Views/Screens/incomefriend.dart';
 import 'feed.dart';
+import 'package:my_app/Views/Screens/cache.dart';
 
 class MainScreen extends StatefulWidget { // thanh navigationbar
   const MainScreen({Key? key}) : super(key: key);
@@ -13,13 +14,31 @@ class MainScreen extends StatefulWidget { // thanh navigationbar
 
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
+  bool _sessionReady = false;
+  late final List<Widget> _screens;
 
-  final List<Widget> _screens = [  // list các screen
-    FeedScreen(),           // feed
-    FriendSuggestScreen(),  // Kết bạn
-    RequestsScreen(), // Lời mời
-    ProfileScreen(),  // Cá nhân 
-  ];
+  
+  @override
+  void initState() {
+    super.initState();
+    _initSession(); // khởi tạo lưu cache
+  }
+
+  Future<void> _initSession() async {
+    await AppSession.instance.init();
+
+    if (mounted) {
+      setState(() {
+        _sessionReady = true;
+        _screens = [
+          FeedScreen(),
+          FriendSuggestScreen(),
+          RequestsScreen(),
+          ProfileScreen(),
+        ];
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

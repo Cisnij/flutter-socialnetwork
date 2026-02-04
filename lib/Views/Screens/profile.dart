@@ -7,8 +7,6 @@ import 'package:my_app/Services/TokenStorage.dart';
 import 'package:my_app/Views/Screens/post_item.dart';
 
 class ProfileScreen extends StatefulWidget {
-  /// null  → profile của mình
-  /// != null → profile user khác
   final int? userId;
 
   const ProfileScreen({super.key, this.userId});
@@ -19,10 +17,11 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final UserController _controller = UserController();
-  final  _friendController =FriendController();
+  final FriendController _friendController = FriendController();
 
   late Future<UserModel> _userFuture;
   late Future<List<PostModel>> _postFuture;
+  late Future<List<UserModel>> _friendsFuture; // hàm future chứ list friend sau khi gọi api
 
   bool get isMyProfile => widget.userId == null;
 
@@ -31,13 +30,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.initState();
 
     if (isMyProfile) {
-      /// ========== PROFILE CỦA MÌNH ==========
       _userFuture = _controller.userInfo();
-      _postFuture = _userFuture.then(
-        (user) => _controller.userPosts(user.id!),
-      );
+      _postFuture =
+          _userFuture.then((user) => _controller.userPosts(user.id!));
+      _friendsFuture =
+        _userFuture.then((user) => _controller.viewFriends(user.id!)); // gán friend future cho data trả về 
     } else {
-      /// ========== PROFILE USER KHÁC ==========
       _userFuture = _controller.viewPage(widget.userId!);
       _postFuture = _controller.userPosts(widget.userId!);
     }
@@ -66,7 +64,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
       body: FutureBuilder<UserModel>(
-        future: _userFuture,
+        future: _userFuture, // 
         builder: (context, userSnap) {
           if (userSnap.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -80,87 +78,207 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
           final user = userSnap.data!;
 
-          return Column(
+          return ListView(
             children: [
               const SizedBox(height: 20),
 
               /// ================= AVATAR =================
-              CircleAvatar(
-                radius: 40,
-                backgroundImage:
-                    user.picture != null ? NetworkImage(user.picture!) : null,
-                child: user.picture == null
-                    ? const Icon(Icons.person, size: 40)
-                    : null,
+              Center(
+                child: CircleAvatar(
+                  radius: 40,
+                  backgroundImage:
+                      user.picture != null ? NetworkImage(user.picture!) : null,
+                  child: user.picture == null
+                      ? const Icon(Icons.person, size: 40)
+                      : null,
+                ),
               ),
 
               const SizedBox(height: 10),
 
               /// ================= NAME =================
-              Text(
-                '${user.firstName} ${user.lastName}',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+              Center(
+                child: Text(
+                  '${user.firstName} ${user.lastName}',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
 
               /// ================= BIO =================
               if (user.bio != null && user.bio!.isNotEmpty) ...[
                 const SizedBox(height: 6),
-                Text(
-                  user.bio!,
-                  style: const TextStyle(color: Colors.grey),
-                  textAlign: TextAlign.center,
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Text(
+                    user.bio!,
+                    style: const TextStyle(color: Colors.grey),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ],
 
               /// ================= ACTION =================
               if (!isMyProfile) ...[
                 const SizedBox(height: 12),
-                ElevatedButton(
-                  onPressed: () async {
-                    await _friendController.sendRequest(user.id!);
-                  },
-                  child: const Text('Add Friend'),
+                Center(
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      await _friendController.sendRequest(user.id!);
+                    },
+                    child: const Text('Add Friend'),
+                  ),
                 ),
               ],
 
               const SizedBox(height: 20),
               const Divider(),
 
-              /// ================= POST LIST =================
-              Expanded(
-                child: FutureBuilder<List<PostModel>>(
-                  future: _postFuture,
-                  builder: (_, postSnap) {
-                    if (postSnap.connectionState ==
-                        ConnectionState.waiting) {
-                      return const Center(
-                        child: CircularProgressIndicator(),
-                      );
-                    }
+              /// ================= FRIEND PREVIEW =================
+              if (isMyProfile)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: FutureBuilder<List<UserModel>>(
+                    future: _friendsFuture, // theo dỗi friend future nếu có data thì theo dõi giá trị
+                    builder: (context, snap) {
+                      if (snap.connectionState ==
+                          ConnectionState.waiting) {
+                        return const Center(
+                          child: CircularProgressIndicator(),
+                        );
+                      }
 
-                    if (postSnap.hasError) {
-                      return Center(
-                        child: Text('Lỗi tải bài viết'),
-                      );
-                    }
+                      if (snap.hasError) {
+                        return const Text('Lỗi tải danh sách bạn bè');
+                      }
 
-                    final posts = postSnap.data!;
-                    if (posts.isEmpty) {
-                      return const Center(
-                        child: Text('Chưa có bài viết'),
-                      );
-                    }
+                      final friends = snap.data!;
+                      if (friends.isEmpty) {
+                        return const Text('Chưa có bạn bè');
+                      }
 
-                    return ListView.builder(
-                      itemCount: posts.length,
-                      itemBuilder: (_, i) =>
-                          PostItem(post: posts[i]),
-                    );
-                  },
+                      final preview = friends.take(6).toList();
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          /// header
+                          Row(
+                            mainAxisAlignment:
+                                MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Friends · ${friends.length}',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  // sau này mở screen danh sách bạn bè
+                                },
+                                child: const Text('See all'),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 8),
+
+                          /// grid preview
+                          GridView.builder(
+                            shrinkWrap: true,
+                            physics:
+                                const NeverScrollableScrollPhysics(),
+                            itemCount: preview.length,
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 3,
+                              mainAxisSpacing: 12,
+                              crossAxisSpacing: 12,
+                              childAspectRatio: 0.8,
+                            ),
+                            itemBuilder: (_, i) {
+                              final f = preview[i];
+                              return InkWell(
+                                borderRadius:
+                                    BorderRadius.circular(12),
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => ProfileScreen(
+                                        userId: f.id,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Column(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 30,
+                                      backgroundImage: f.picture != null
+                                          ? NetworkImage(f.picture!)
+                                          : null,
+                                      child: f.picture == null
+                                          ? const Icon(Icons.person)
+                                          : null,
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      f.firstName ?? '',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+
+                          const SizedBox(height: 12),
+                          const Divider(),
+                        ],
+                      );
+                    },
+                  ),
                 ),
+
+              /// ================= POSTS =================
+              FutureBuilder<List<PostModel>>(
+                future: _postFuture,
+                builder: (_, postSnap) {
+                  if (postSnap.connectionState ==
+                      ConnectionState.waiting) {
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  }
+
+                  if (postSnap.hasError) {
+                    return const Center(
+                      child: Text('Lỗi tải bài viết'),
+                    );
+                  }
+
+                  final posts = postSnap.data!;
+                  if (posts.isEmpty) {
+                    return const Center(
+                      child: Text('Chưa có bài viết'),
+                    );
+                  }
+
+                  return ListView.builder(
+                    shrinkWrap: true,
+                    physics:
+                        const NeverScrollableScrollPhysics(),
+                    itemCount: posts.length,
+                    itemBuilder: (_, i) =>
+                        PostItem(post: posts[i]),
+                  );
+                },
               ),
             ],
           );

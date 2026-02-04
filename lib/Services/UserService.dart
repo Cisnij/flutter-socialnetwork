@@ -15,8 +15,8 @@ class UserService{
   Future<http.Response> userModify(Map<String, dynamic> jsonData, int id) async{
     return await authPut(url: 'http://172.17.17.98:8000/api/user/profile/$id/', body: jsonData);
   }
-  Future<http.Response> viewFriends() async{
-    return await authGet(url: 'http://172.17.17.98:8000/api/friends');
+  Future<http.Response> viewFriends(int id) async{
+    return await authGet(url: 'http://172.17.17.98:8000/api/friends/$id/');
   }
 
   Future<http.Response> search(String name) async{

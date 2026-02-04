@@ -40,37 +40,38 @@ class UserController {
     }
   } 
 
-  Future<List<UserModel>> viewFriends() async {
-    final res = await _service.viewFriends();
+  Future<List<UserModel>> viewFriends(int id) async {
+    final res = await _service.viewFriends(id);
 
     if (res.statusCode == 200) {
       final List data = jsonDecode(res.body);
-      return data.map((e) => UserModel.fromJson(e)).toList(); // sau khi có data lấy ra data, từng thừng con biến nó thành data thường r bỏ vào list
+      return data.map((e) => UserModel.fromJson(e['user'])).toList(); // sau khi có data lấy ra data, từng thừng con biến nó thành data thường r bỏ vào list
     } else {
       throw Exception('Có lỗi khi lấy danh sách bạn bè');
     }
   }
   Future<List<PostModel>> userPosts(int userId) async {
-  final res = await _service.userPost(userId);
+    final res = await _service.userPost(userId);
 
-  if (res.statusCode == 200) {
-    final Map<String, dynamic> data = jsonDecode(res.body);
-    final List results = data['results'];
+    if (res.statusCode == 200) {
+      final Map<String, dynamic> data = jsonDecode(res.body);
+      final List results = data['results'];
 
-    return results.map((e) => PostModel.fromJson(e)).toList(); // chuyển từng thành con thành fromJson và biến thành list
-  } else {
-    throw Exception('Có lỗi khi lấy bài viết của user');
+      return results.map((e) => PostModel.fromJson(e)).toList(); // chuyển từng thành con thành fromJson và biến thành list
+    } else {
+      throw Exception('Có lỗi khi lấy bài viết của user');
+    }
   }
-}
-Future<List<UserModel>> searchUser(String name) async{
-  final res = await _service.search(name);
-  if (res.statusCode == 200) {
-    final Map<String, dynamic> data = jsonDecode(res.body);
-    final List results = data['results'];
-    return results.map((e) => UserModel.fromJson(e)).toList();
-  } else {
-    throw Exception('Có lỗi khi lấy thông tin user');
+
+  Future<List<UserModel>> searchUser(String name) async{
+    final res = await _service.search(name);
+    if (res.statusCode == 200) {
+      final Map<String, dynamic> data = jsonDecode(res.body);
+      final List results = data['results'];
+      return results.map((e) => UserModel.fromJson(e)).toList();
+    } else {
+      throw Exception('Có lỗi khi lấy thông tin user');
+    }
   }
-}
 
 }

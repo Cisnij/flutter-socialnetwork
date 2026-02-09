@@ -4,7 +4,7 @@ import 'package:my_app/Services/AuthService.dart';
 class PostService {
   Future<http.Response> createPost(Map<String, dynamic> data) async { //tạo post
     return await authFetch(
-      url: 'http://10.0.2.2:55394/api/user/post/create/',
+      url: 'http://localhost:8000/api/user/post/create/',
       body: data,
     );
   }
@@ -12,7 +12,7 @@ class PostService {
   /// Sửa post, update và retreive
   Future<http.Response> delPost(int id,) async {
     return await authDelete(
-      url: 'http://10.0.2.2:8000/api/user/post/$id/',
+      url: 'http://localhost:8000/api/user/post/$id/',
     );
   }
 
@@ -20,7 +20,7 @@ class PostService {
   /// Xem post theo id
   Future<http.Response> getFeedPost() async {
     return await authGet(
-      url: 'http://10.0.2.2:8000/api/user/post/show',
+      url: 'http://localhost:8000/api/user/post/show',
     );
   }
 }

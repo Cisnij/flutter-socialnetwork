@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_app/Services/FirebaseService.dart';
 import 'package:my_app/Views/Screens/addfriend.dart';
 import 'package:my_app/Views/Screens/profile.dart';
 import 'package:my_app/Views/Screens/incomefriend.dart';
@@ -23,10 +24,11 @@ class _MainScreenState extends State<MainScreen> {
     super.initState();
     _initSession(); // khởi tạo lưu cache
   }
+  
 
   Future<void> _initSession() async {
     await AppSession.instance.init();
-
+    // await FirebaseService.init(); // khởi tạo firebase
     if (mounted) {
       setState(() {
         _sessionReady = true;
@@ -42,6 +44,11 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if(!_sessionReady) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
     return Scaffold(
       body: IndexedStack( // giữ state các screen
         index: _currentIndex, // nhận vào index hiện tại nhận vào

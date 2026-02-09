@@ -3,6 +3,8 @@ import 'package:my_app/Controllers/PostController.dart';
 import 'package:my_app/Models/PostModel.dart';
 import 'package:my_app/Models/UserModel.dart';
 import 'package:my_app/Controllers/FunctionController.dart';
+import 'package:my_app/Views/Screens/cache.dart';
+import 'package:my_app/Views/Screens/comment.dart';
 import 'package:my_app/Views/Screens/profile.dart';
 
 class PostItem extends StatefulWidget {
@@ -44,6 +46,38 @@ class _PostItemState extends State<PostItem> {
       0,
       (sum, r) => sum + r.total, // lặp từ 0 và cộng vào tới hết
     );
+    String _formatDate(String? raw) {
+      if (raw == null) return '';
+      final dt = DateTime.tryParse(raw);
+      if (dt == null) return '';
+
+      final now = DateTime.now();
+      final diff = now.difference(dt);
+
+      if (diff.inSeconds < 10) {
+        return 'Vừa xong';
+      }
+
+      if (diff.inSeconds < 60) {
+        return '${diff.inSeconds} giây trước';
+      }
+
+      if (diff.inMinutes < 60) {
+        return '${diff.inMinutes} phút trước';
+      }
+
+      if (diff.inHours < 24) {
+        return '${diff.inHours} giờ trước';
+      }
+
+      if (diff.inDays < 7) {
+        return '${diff.inDays} ngày trước';
+      }
+
+      final weeks = (diff.inDays / 7).floor();
+      return '$weeks tuần trước';
+    }
+
 
     return Card( // dạng card cho post
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), // khoảng cách margin card
@@ -96,7 +130,7 @@ class _PostItemState extends State<PostItem> {
                         ),
                       ),
                       Text(
-                        post.createdAt ?? '',
+                        _formatDate(post.createdAt ?? ''),
                         style: const TextStyle(
                           fontSize: 12,
                           color: Colors.grey,
@@ -106,9 +140,10 @@ class _PostItemState extends State<PostItem> {
                   ),
                 ),
 
-                /// ---------- MORE ICON ----------
+               /// ---------- MORE ICON ----------          
+                if(AppSession.instance.isMe(post.user?.id))                                      
                 IconButton(
-                  icon: const Icon(Icons.more_horiz), //icon 3 chấm setting
+                  icon: Icon(Icons.more_horiz), //icon 3 chấm setting
                   onPressed: () {
                     _showPostActions(context);
                   },
@@ -202,7 +237,12 @@ class _PostItemState extends State<PostItem> {
                   icon: Icons.comment_outlined,
                   label: 'Comment',
                   onTap: () {
-                    // TODO: mở comment screen
+                    showModalBottomSheet( // tạo khung modal dưới lên 
+                      context: context,
+                      isScrollControlled: true, // có thể scroll 
+                      backgroundColor: Colors.transparent, //background
+                      builder: (_) => CommentSheet( postId: post.id!),  // build giao diện load ra cmt bên trong
+                    );
                   },
                 ),
               ],

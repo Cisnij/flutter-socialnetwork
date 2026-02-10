@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:my_app/Controllers/FunctionController.dart';
 import 'package:my_app/Controllers/PostController.dart';
 import 'package:my_app/Controllers/themeController.dart';
@@ -17,11 +19,17 @@ class _FeedScreenState extends State<FeedScreen> {
   final _functionController = FunctionController();
   late Future<List<PostModel>> _feedFuture; // biến late để gán giá trị sau nhưng chắc chắn sẽ gắn, đây là future chứa list
   List<PostModel> _posts = []; // thêm list local để quản lý UI realtime
-  bool _initialized = false;
+  bool _initialized = false; 
+  // THÊM POST
+  final TextEditingController _postController = TextEditingController();
+  bool _posting = false;
+  List<File> _selectedImages = [];
+
 
   // === NOTIFICATION ADD ===
   List<InAppNotification> _notis = [];
-      String _formatDate(String? raw) {
+
+      String _formatDate(String? raw) { //parse thời gian
       if (raw == null) return '';
       final dt = DateTime.tryParse(raw);
       if (dt == null) return '';
@@ -60,6 +68,113 @@ class _FeedScreenState extends State<FeedScreen> {
     _loadNoti(); //gọi hàm 
   }
 
+  // THÊM POST
+  Future<void> _pickImages() async { // hàm chọn ảnh từ thiết bị 
+    final picker = ImagePicker();
+    final files = await picker.pickMultiImage(imageQuality: 80);
+    if (files != null) {
+      setState(() {
+        _selectedImages = files.map((e) => File(e.path)).toList();
+      });
+    }
+  }
+  void _openCreatePost() { // hàm mở dialog khung chọn ảnh 
+  showDialog(
+    context: context,
+    builder: (_) {
+      return AlertDialog(
+        title: const Text('Tạo bài viết'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _postController, // gọi controller control text
+              maxLines: 4,
+              decoration: const InputDecoration(
+                hintText: 'Bạn đang nghĩ gì?',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            if (_selectedImages.isNotEmpty)
+              SizedBox(
+                height: 80,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _selectedImages.length,
+                  itemBuilder: (_, i) => Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: Image.file(
+                      _selectedImages[i],
+                      width: 80,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+              ),
+
+            TextButton.icon(
+              icon: const Icon(Icons.photo),
+              label: const Text('Chọn ảnh'),
+              onPressed: _pickImages, // nhấn icon sẽ chọn ảnh
+            ),
+          ],
+        ),
+        actions: [
+          TextButton( // nút hủy hết dữ liệu và đóng 
+            onPressed: () {
+              _postController.clear();
+              _selectedImages.clear();
+              Navigator.pop(context);
+            },
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton( // nút gọi controller tạo post, 
+            onPressed: _posting ? null : _submitPost,
+            child: _posting
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('Đăng'),
+          ),
+        ],
+      );
+    },
+  );
+}
+Future<void> _submitPost() async { // hàm gọi controller submit 
+  final text = _postController.text.trim();
+  if (text.isEmpty && _selectedImages.isEmpty) return;
+
+  setState(() => _posting = true); // bật trạng thái đang đăng để disable nút và show loading
+
+  try {
+    final post = await _controller.createPost( // gọi troller truyền vào file 
+      title: text,
+      images: _selectedImages,
+    );
+
+    setState(() { // thành công thì load lại trang 
+      _posts.insert(0, post); // thêm vào list post mới ở vị trí 0
+      _postController.clear(); // xóa hết text và ảnh 
+      _selectedImages.clear();
+    });
+
+    Navigator.pop(context); // đóng khung
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(e.toString())), // báo lỗi nếu có res
+    );
+  } finally {
+    setState(() => _posting = false);
+  }
+}
+
+
+
   // === NOTIFICATION ADD ===
   Future<void> _loadNoti() async {
     try {
@@ -69,8 +184,6 @@ class _FeedScreenState extends State<FeedScreen> {
       });
     } catch (_) {}
   }
-
-  // === NOTIFICATION ADD ===
   void _showNoti() {
     showModalBottomSheet( // mở ô bên dưới 
       context: context,
@@ -88,7 +201,7 @@ class _FeedScreenState extends State<FeedScreen> {
                       leading: Icon(
                         noti.verb == 'reacted' // nếu verb là react thì icon là trái tim 
                             ? Icons.favorite
-                            : Icons.comment,
+                            : Icons.add,
                         color: noti.verb == 'reacted' // màu là đỏ nếu là react
                             ? Colors.red
                             : Colors.blue,
@@ -115,8 +228,7 @@ class _FeedScreenState extends State<FeedScreen> {
     return Scaffold(
       appBar: AppBar( // thanh bar dài phía trên
         title: Text('Home'),
-        actions: [
-          
+        actions: [          
          IconButton(
             icon: Icon(
               Theme.of(context).brightness == Brightness.dark // giá trị khi nhấn sẽ chuyển icon
@@ -155,6 +267,10 @@ class _FeedScreenState extends State<FeedScreen> {
                   ),
                 ),
             ],
+          ),
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: _openCreatePost,
           ),
         ],
       ),

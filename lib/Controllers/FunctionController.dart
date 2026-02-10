@@ -55,7 +55,7 @@ class FunctionController {
   Future<List<InAppNotification>> noti() async {
     final res = await _service.getNoti();
     if(res.statusCode ==200 ){
-      final List<dynamic> data = jsonDecode(res.body);
+      final List<dynamic> data = jsonDecode(res.body)['results'];
       return data.map((e) => InAppNotification.fromJson(e)).toList();
     }
     else{

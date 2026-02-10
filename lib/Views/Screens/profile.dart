@@ -20,6 +20,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final UserController _controller = UserController(); // gọi controller
   final FriendController _friendController = FriendController();
 
+  // === BIẾN THÊM VÀO ĐỂ FIX LỖI REQUEST ID ===
+  Map<int, int> _allRequestIdMap = {}; // Lưu: userId -> requestId (cho cả nhận và gửi)
+
+  // ===== EDIT USER =====
+  bool _isEditing = false;
+  final _editFormKey = GlobalKey<FormState>();
+
+  late TextEditingController _editFirstNameCtrl;
+  late TextEditingController _editLastNameCtrl;
+  late TextEditingController _editBioCtrl;
+  late TextEditingController _editPhoneCtrl;
+  DateTime? _editDob;
+
+
   late Future<UserModel> _userFuture; // khai báo đối tượng dạng bất đồng bộ lấy data sau gọi api
   late Future<List<PostModel>> _postFuture;
   late Future<List<UserModel>> _friendsFuture;
@@ -28,9 +42,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
       widget.userId == null ||
       widget.userId == AppSession.instance.myId; // check profile nếu ram đã lưu id
 
+  // --- HÀM SYNC ĐỂ LẤY REQUEST ID TRƯỚC KHI THỰC HIỆN ---
+  Future<void> _syncAllRequests() async {
+    try {
+      // 1. Lấy lời mời nhận được (Income)
+      final income = await _friendController.incomeRequest();
+      if (income != null) {
+        for (var req in income) {
+          _allRequestIdMap[req['sender']['id']] = req['id'];
+        }
+      }
+      // 2. Lấy lời mời đã gửi (Sent) - Để lấy rid cho nút Cancel
+      final sent = await _friendController.outgoingRequest(); 
+      if (sent != null) {
+        for (var req in sent) {
+          _allRequestIdMap[req['receiver']['id']] = req['id'];
+        }
+      }
+    } catch (e) {
+      debugPrint("Sync error: $e");
+    }
+  }
+
+  Future<void> _reloadProfile() async { // hàm reload
+    await _syncAllRequests(); // Đồng bộ ID trước
+    if (isMyProfile) {
+      _userFuture = _controller.userInfo();
+      _postFuture =
+          _userFuture.then((user) => _controller.userPosts(user.id!));
+      _friendsFuture =
+          _userFuture.then((user) => _controller.viewFriends(user.id!));
+    } else {
+      _userFuture = _controller.viewPage(widget.userId!);
+      _postFuture = _controller.userPosts(widget.userId!);
+    }
+    setState(() {});
+}
+
   @override
   void initState() {
     super.initState();
+    _syncAllRequests(); // Chạy đồng bộ ID ngay khi init
 
     if (isMyProfile) {
       _userFuture = _controller.userInfo(); // nếu true lấy profile và post và fr
@@ -50,22 +102,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final id = widget.userId;
 
     if (id == null) return ''; // hàm check trong ram dựa vào id truyền vào profile và trả về giá trị 
-    if (session.isFriend(id)) return 'Bạn bè';
+    if (session.isFriend(id)) return 'Hủy kết bạn';
     if (session.isSent(id)) return 'Đã gửi';
     if (session.isReceive(id)) return 'Chờ xác nhận';
     return 'Kết bạn';
   }
 
   /// ===== FRIEND BUTTON ENABLE =====
-  bool get canSendRequest { // khả năng nhấn của nút
-    final session = AppSession.instance;
+  bool get canSendRequest { // khả năng nhấn của nút , check nếu là mình thì kh thể ấn gì 
     final id = widget.userId;
-
     if (id == null) return false;
-    if (session.isFriend(id)) return false;
-    if (session.isSent(id)) return false;
     return true;
   }
+
+  
 
   @override
   Widget build(BuildContext context) {
@@ -88,6 +138,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 }
               },
             ),
+            IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: () {
+                setState(() {
+                  _isEditing = !_isEditing; // khi nhấn thì chuyển trang thái edit thành true để nhận giá trị bàn phím
+                });
+              },
+            ),
         ],
       ),
       body: FutureBuilder<UserModel>( // xây dựng dựa vào dữ liệu bất đồng bộ của th object
@@ -104,8 +162,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
           }
 
           final user = userSnap.data!;
-
-          return ListView(
+          if (_isEditing) { // nếu đang edit thì gán dữ liệu vào
+            _editFirstNameCtrl =
+                TextEditingController(text: user.firstName);
+            _editLastNameCtrl =
+                TextEditingController(text: user.lastName);
+            _editBioCtrl =
+                TextEditingController(text: user.bio ?? '');
+            _editPhoneCtrl =
+                TextEditingController(text: user.phoneNumber ?? '');
+            _editDob = user.dateOfBirth;
+          }
+        return RefreshIndicator(
+          onRefresh: _reloadProfile, 
+          child: ListView(
             children: [
               const SizedBox(height: 20),
 
@@ -146,18 +216,142 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
               ],
+              /// ===== EDIT PROFILE (ADD ONLY) =====
+              if (_isEditing && isMyProfile) ...[
+                const SizedBox(height: 16),
+                Center(
+                  child: Card(
+                    elevation: 8,
+                    margin: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Form(
+                        key: _editFormKey,
+                        child: Column(
+                          children: [
+                            const Text(
+                              'Chỉnh sửa thông tin',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+
+                            TextFormField(
+                              controller: _editFirstNameCtrl,
+                              decoration:
+                                  const InputDecoration(labelText: 'First name'),
+                            ),
+
+                            TextFormField(
+                              controller: _editLastNameCtrl,
+                              decoration:
+                                  const InputDecoration(labelText: 'Last name'),
+                            ),
+
+                            TextFormField(
+                              controller: _editPhoneCtrl,
+                              decoration:
+                                  const InputDecoration(labelText: 'Phone'),
+                            ),
+
+                            TextFormField(
+                              controller: _editBioCtrl,
+                              maxLines: 3,
+                              decoration:
+                                  const InputDecoration(labelText: 'Bio'),
+                            ),
+
+                            const SizedBox(height: 12),
+
+                            ElevatedButton(
+                              onPressed: () async {
+                                final updated = UserModel(
+                                  id: user.id,
+                                  firstName: _editFirstNameCtrl.text,
+                                  lastName: _editLastNameCtrl.text,
+                                  bio: _editBioCtrl.text,
+                                  phoneNumber: _editPhoneCtrl.text,
+                                  dateOfBirth: _editDob,
+                                );
+
+                                await _controller.userModify(
+                                  user.id!,
+                                  updated,
+                                );
+
+                                setState(() {
+                                  _isEditing = false;
+                                  _userFuture = _controller.userInfo();
+                                });
+                              },
+                              child: const Text('Lưu'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+
 
               /// ===== ACTION =====
               if (!isMyProfile) ...[ 
                 const SizedBox(height: 12),
                 Center(
                   child: ElevatedButton(
-                    onPressed: canSendRequest
+                    onPressed: canSendRequest // hàm sẽ check nếu true thì được nếu else thì null
                         ? () async {
-                            await _friendController.sendRequest(user.id!);
-                            setState(() {
-                              AppSession.instance.sentRequestIds.add(user.id!);
-                            });
+                            final session = AppSession.instance;
+                            final id = user.id!;
+
+                            // Lấy requestId tương ứng với user đang xem
+                            final rId = _allRequestIdMap[id];
+
+                            if (session.isFriend(id)) {
+                              await _friendController.deleteRequest(id);
+                              session.friendIds.remove(id);
+                            } 
+                            else if (session.isSent(id)) {
+                              // CANCEL REQUEST - YÊU CẦU RID
+                              if (rId != null) {
+                                await _friendController.cancelRequest(rId); 
+                                session.sentRequestIds.remove(id);
+                                _allRequestIdMap.remove(id);
+                              } else {
+                                await _syncAllRequests();
+                                final retryId = _allRequestIdMap[id];
+                                if (retryId != null) {
+                                  await _friendController.cancelRequest(retryId);
+                                  session.sentRequestIds.remove(id);
+                                }
+                              }
+                            } 
+                            else if (session.isReceive(id)) {
+                              // ACCEPT - YÊU CẦU RID
+                              if (rId != null) {
+                                await _friendController.acceptRequest(rId);
+                                session.friendIds.add(id);
+                                session.receiveRequestIds.remove(id);
+                                _allRequestIdMap.remove(id);
+                              } else {
+                                await _syncAllRequests();
+                                final retryId = _allRequestIdMap[id];
+                                if (retryId != null) {
+                                  await _friendController.acceptRequest(retryId);
+                                  session.friendIds.add(id);
+                                  session.receiveRequestIds.remove(id);
+                                }
+                              }
+                            } 
+                            else {
+                              //  SEND REQUEST
+                              await _friendController.sendRequest(id);
+                              session.sentRequestIds.add(id);
+                              await _syncAllRequests();
+                            }
+                            setState(() {});// reload trang
                           }
                         : null,
                     child: Text(friendButtonText), // lấy giá trị hàm trên để return ví dụ bạn bè, kết bạn dựa vào id 
@@ -306,7 +500,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 },
               ),
             ],
-          );
+          ),
+        );
         },
       ),
     );

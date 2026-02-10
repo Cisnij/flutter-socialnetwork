@@ -80,6 +80,10 @@ class InAppNotification{
         return '$actor đã react bài viết của bạn';
       case 'commented':
         return '$actor đã bình luận bài viết của bạn';
+      case 'requested':
+        return '$actor đã gửi lời mời kết bạn';
+      case 'followed':
+        return '$actor đã theo dõi bạn';
       default:
         return '$actor có hoạt động mới';
     }

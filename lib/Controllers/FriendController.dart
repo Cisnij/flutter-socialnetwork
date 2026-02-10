@@ -65,5 +65,19 @@ class FriendController {
     isLoading = false;
     return res.statusCode == 200;
   }
+  Future<bool> cancelRequest(int id) async {
+    isLoading = true;
+
+    final res = await _service.cancelFriend(id);
+    isLoading = false;
+    return res.statusCode == 200;
+  }
+  Future<bool> rejectRequest(int id) async {
+    isLoading = true;
+
+    final res = await _service.rejectFriend(id);
+    isLoading = false;
+    return res.statusCode == 200;
+  }
 }
 

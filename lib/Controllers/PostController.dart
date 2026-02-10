@@ -1,21 +1,21 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:my_app/Services/PostService.dart';
 import 'package:my_app/Models/PostModel.dart';
 
 class PostController{
   final _service = PostService();
 
-  Future<PostModel> createPost(String title) async { // tạo post
-    final model = PostModel(title: title);
-    final res = await _service.createPost(model.toJson()); // gọi api truyền vào data đã được model chuyển thành json
-
-    if (res.statusCode == 201 || res.statusCode == 200) {
-      final data = jsonDecode(res.body); // chuyển thành map
-      return PostModel.fromJson(data); // tạo object từ map
-    } else {
-      throw Exception('Xảy ra lỗi');
+  Future<PostModel> createPost({required String title, List<File> images = const [],}) async {
+      final res = await _service.createPost(title: title,images: images,);
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        final data = jsonDecode(res.body);
+        return PostModel.fromJson(data);
+      } else {
+        throw Exception('Tạo post thất bại');
     }
   }
+
 
 
 Future<bool> delPost(int id) async { // sửa post

@@ -29,14 +29,15 @@ class UserController {
   }
 
 
-  Future<UserModel> userModify(int id, UserModel model) async {
+  Future<bool> userModify(int id, UserModel model) async {
     final res = await _service.userModify(model.toJson(), id);
 
     if (res.statusCode == 200 || res.statusCode == 201) {
-      final Map<String, dynamic> data = jsonDecode(res.body);
-      return UserModel.fromJson(data);
-    } else {
-      throw Exception('Có lỗi khi cập nhật user');
+      return true;
+    }
+    else 
+    {
+      return false;
     }
   } 
 

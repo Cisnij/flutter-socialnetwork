@@ -9,10 +9,28 @@ class RequestsScreen extends StatefulWidget {
   State<RequestsScreen> createState() => _RequestsScreenState();
 }
 
+// Giữ nguyên hàm format date như yêu cầu
+String _formatDate(String? raw) {
+  if (raw == null) return '';
+  final dt = DateTime.tryParse(raw);
+  if (dt == null) return '';
+
+  final now = DateTime.now();
+  final diff = now.difference(dt);
+
+  if (diff.inSeconds < 10) return 'Vừa xong';
+  if (diff.inSeconds < 60) return '${diff.inSeconds} giây trước';
+  if (diff.inMinutes < 60) return '${diff.inMinutes} phút trước';
+  if (diff.inHours < 24) return '${diff.inHours} giờ trước';
+  if (diff.inDays < 7) return '${diff.inDays} ngày trước';
+
+  final weeks = (diff.inDays / 7).floor();
+  return '$weeks tuần trước';
+}
+
 class _RequestsScreenState extends State<RequestsScreen> {
   final _controller = FriendController();
   
-  // Khởi tạo mảng rỗng để tránh lỗi 'isEmpty' trên biến undefined
   List<dynamic> _listRequests = []; 
   bool _isLoading = true;
 
@@ -22,13 +40,12 @@ class _RequestsScreenState extends State<RequestsScreen> {
     _fetchData();
   }
 
-  // Hàm lấy dữ liệu từ API
   Future<void> _fetchData() async {
     try {
       final data = await _controller.incomeRequest();
       if (mounted) {
         setState(() {
-          _listRequests = data ?? []; // Chống null
+          _listRequests = data ?? [];
           _isLoading = false;
         });
       }
@@ -38,24 +55,40 @@ class _RequestsScreenState extends State<RequestsScreen> {
     }
   }
 
-  /// ================= XỬ LÝ CHẤP NHẬN (NHẤN LÀ MẤT LUÔN) =================
+  /// ================= XỬ LÝ CHẤP NHẬN =================
   Future<void> _handleAccept(dynamic requestId) async {
-    // 1. Thực hiện xóa trên giao diện NGAY LẬP TỨC (Optimistic UI)
-    // Người dùng sẽ thấy dòng đó biến mất ngay khi vừa chạm tay vào nút
     setState(() {
       _listRequests.removeWhere((item) => item['id'] == requestId);
     });
 
-    // 2. Gọi API chạy ngầm bên dưới
     try {
       final ok = await _controller.acceptRequest(requestId);
-      
       if (!ok && mounted) {
-        // Nếu API thất bại, báo lỗi và có thể load lại danh sách để hoàn tác
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Đã chấp nhận lời mời kết bạn thành công')),
+          const SnackBar(content: Text('Lỗi khi chấp nhận lời mời')),
         );
         _fetchData(); 
+      }
+    } catch (e) {
+      if (mounted) _fetchData();
+    }
+  }
+
+  /// ================= XỬ LÝ HỦY/TỪ CHỐI (MỚI THÊM) =================
+  Future<void> _handleCancel(dynamic requestId) async {
+    // Optimistic UI: Xóa khỏi danh sách ngay lập tức
+    setState(() {
+      _listRequests.removeWhere((item) => item['id'] == requestId);
+    });
+
+    try {
+      // Sử dụng requestId để hủy
+      final ok = await _controller.rejectRequest(requestId);
+      if (!ok && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Lỗi khi từ chối lời mời')),
+        );
+        _fetchData();
       }
     } catch (e) {
       if (mounted) _fetchData();
@@ -70,7 +103,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
         elevation: 0,
       ),
       body: _isLoading 
-        ? const Center(child: CircularProgressIndicator()) // Đang load ban đầu
+        ? const Center(child: CircularProgressIndicator())
         : RefreshIndicator(
             onRefresh: _fetchData,
             child: _listRequests.isEmpty 
@@ -92,7 +125,6 @@ class _RequestsScreenState extends State<RequestsScreen> {
                       final sender = request['sender'];
 
                       return ListTile(
-                        // Cực kỳ quan trọng: Dùng ID làm Key để Flutter xóa đúng dòng
                         key: ValueKey('request_${request['id']}'), 
                         leading: GestureDetector(
                           onTap: () {
@@ -117,14 +149,34 @@ class _RequestsScreenState extends State<RequestsScreen> {
                           '${sender['first_name']} ${sender['last_name']}',
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        subtitle: Text('Gửi lúc: ${request['created']}'),
-                        trailing: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
-                            foregroundColor: Colors.white,
-                          ),
-                          onPressed: () => _handleAccept(request['id']),
-                          child: const Text('Accept'),
+                        subtitle: Text('Gửi lúc: ${_formatDate(request['created'])}'),
+                        
+                        // Sửa phần trailing để chứa 2 nút
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min, // Quan trọng để không chiếm hết chiều ngang
+                          children: [
+                            // NÚT CHẤP NHẬN
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                              ),
+                              onPressed: () => _handleAccept(request['id']),
+                              child: const Text('Accept'),
+                            ),
+                            const SizedBox(width: 8),
+                            // NÚT TỪ CHỐI / HỦY (MỚI)
+                            OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: Colors.grey),
+                                foregroundColor: Colors.black87,
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                              ),
+                              onPressed: () => _handleCancel(request['id']),
+                              child: const Text('Cancel'),
+                            ),
+                          ],
                         ),
                       );
                     },

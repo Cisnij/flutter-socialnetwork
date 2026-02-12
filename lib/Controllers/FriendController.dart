@@ -54,30 +54,30 @@ class FriendController {
     isLoading = true;
 
     final res = await _service.acceptFriend(id);
-
     isLoading = false;
-    return res.statusCode == 201;
+    return res.statusCode == 201 || res.statusCode ==200;
   }
+  
   Future<bool> deleteRequest(int id) async {
     isLoading = true;
 
     final res = await _service.deleteFriend(id);
     isLoading = false;
-    return res.statusCode == 200;
+    return res.statusCode == 201 || res.statusCode ==200;
   }
   Future<bool> cancelRequest(int id) async {
     isLoading = true;
 
     final res = await _service.cancelFriend(id);
     isLoading = false;
-    return res.statusCode == 200;
+    return res.statusCode == 201 || res.statusCode ==200;
   }
   Future<bool> rejectRequest(int id) async {
     isLoading = true;
 
     final res = await _service.rejectFriend(id);
     isLoading = false;
-    return res.statusCode == 200;
+    return res.statusCode == 201 || res.statusCode ==200;
   }
 }
 

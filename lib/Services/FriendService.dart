@@ -18,10 +18,10 @@ class FriendService{
     return await authGet(url: 'http://localhost:8000/api/friends/requests/outgoing/'); //ok
   }
   Future<http.Response> cancelFriend(int id) async{
-    return await authDelete(url: 'http://localhost:8000/api/friends/request/$id/cancel/'); //chưa ok
+    return await authDelete(url: 'http://localhost:8000/api/friends/request/$id/cancel/'); //ok 
   }
   Future<http.Response> rejectFriend(int id) async{
-    return await authPut(url: 'http://localhost:8000/api/friends/request/$id/reject/'); //chưa ok
+    return await authPut(url: 'http://localhost:8000/api/friends/request/$id/reject/'); //ok 
   }
 
 

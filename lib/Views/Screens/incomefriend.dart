@@ -9,15 +9,16 @@ class RequestsScreen extends StatefulWidget {
   State<RequestsScreen> createState() => _RequestsScreenState();
 }
 
-// Giữ nguyên hàm format date như yêu cầu
+// hàm parse thgian thành n giây, phút, giờ, ngày trước
 String _formatDate(String? raw) {
-  if (raw == null) return '';
-  final dt = DateTime.tryParse(raw);
+  if (raw == null) return ''; // nếu k truyền thgian thì rỗng
+  final dt = DateTime.tryParse(raw); // parse dạng thgian raw thành datetime 
   if (dt == null) return '';
 
-  final now = DateTime.now();
-  final diff = now.difference(dt);
+  final now = DateTime.now(); // lấy thgian hiện tại 
+  final diff = now.difference(dt); // lấy sự khác biệt giữa thgian hiện tại và thời gian truyền vào 
 
+  // nếu khác biệt sao thì trả về vậy 
   if (diff.inSeconds < 10) return 'Vừa xong';
   if (diff.inSeconds < 60) return '${diff.inSeconds} giây trước';
   if (diff.inMinutes < 60) return '${diff.inMinutes} phút trước';
@@ -30,22 +31,21 @@ String _formatDate(String? raw) {
 
 class _RequestsScreenState extends State<RequestsScreen> {
   final _controller = FriendController();
-  
-  List<dynamic> _listRequests = []; 
+  List<dynamic> _listRequests = [];  // list lưu lời mời 
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _fetchData();
+    _fetchData(); // tải dữ liệu khi khởi tạo 
   }
 
   Future<void> _fetchData() async {
     try {
-      final data = await _controller.incomeRequest();
-      if (mounted) {
+      final data = await _controller.incomeRequest(); // lấy ra lời mời 
+      if (mounted) { // đảm bảo setstate chỉ gọi khi widget tồn taij 
         setState(() {
-          _listRequests = data ?? [];
+          _listRequests = data ?? []; // gán data vào list 
           _isLoading = false;
         });
       }
@@ -56,7 +56,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
   }
 
   /// ================= XỬ LÝ CHẤP NHẬN =================
-  Future<void> _handleAccept(dynamic requestId) async {
+  Future<void> _handleAccept(dynamic requestId) async { //truyền id và gọi accept, sau đó thêm vào list 
     setState(() {
       _listRequests.removeWhere((item) => item['id'] == requestId);
     });
@@ -74,9 +74,8 @@ class _RequestsScreenState extends State<RequestsScreen> {
     }
   }
 
-  /// ================= XỬ LÝ HỦY/TỪ CHỐI (MỚI THÊM) =================
-  Future<void> _handleCancel(dynamic requestId) async {
-    // Optimistic UI: Xóa khỏi danh sách ngay lập tức
+  /// ================= XỬ LÝ TỪ CHỐI =================
+  Future<void> _handleCancel(dynamic requestId) async { // truyền id vào để gọi cancel, xóa khỏi list 
     setState(() {
       _listRequests.removeWhere((item) => item['id'] == requestId);
     });
@@ -105,7 +104,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
       body: _isLoading 
         ? const Center(child: CircularProgressIndicator())
         : RefreshIndicator(
-            onRefresh: _fetchData,
+            onRefresh: _fetchData, // kéo tải lại lời mời kb 
             child: _listRequests.isEmpty 
                 ? ListView(
                     physics: const AlwaysScrollableScrollPhysics(),
@@ -166,7 +165,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
                               child: const Text('Accept'),
                             ),
                             const SizedBox(width: 8),
-                            // NÚT TỪ CHỐI / HỦY (MỚI)
+                            // NÚT HỦY 
                             OutlinedButton(
                               style: OutlinedButton.styleFrom(
                                 side: const BorderSide(color: Colors.grey),

@@ -10,10 +10,10 @@ import 'package:provider/provider.dart';
 
 void main() async{
   WidgetsFlutterBinding.ensureInitialized(); // đảm bảo flutter đã khởi tạo xong
-  // await Firebase.initializeApp();
+  // await Firebase.initializeApp(); // hàm khởi tạo firebase
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => ThemeController(),
+    ChangeNotifierProvider( // cung cấp theme sáng tối  cho toàn app
+      create: (_) => ThemeController(), // khởi tạo controller 
       child: const MyApp(),
     ),
   );
@@ -24,16 +24,16 @@ class MyApp extends StatelessWidget {
   
   @override
   Widget build(BuildContext context) {
-    final theme = context.watch<ThemeController>();
+    final theme = context.watch<ThemeController>(); // lắng nghe sự thay đổi theme để đổi theo 
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
+      debugShowCheckedModeBanner: false, // xóa thanh debug bar 
 
       themeMode: theme.themeMode, // chuyển theme toàn màn hình
-      /// 🌞 LIGHT
-      theme: ThemeData(
-        brightness: Brightness.light,
+      // LIGHT
+      theme: ThemeData( // định nghĩa theme
+        brightness: Brightness.light, 
       ),
-      /// 🌙 DARK
+      // DARK
       darkTheme: ThemeData(
         brightness: Brightness.dark,
       ),

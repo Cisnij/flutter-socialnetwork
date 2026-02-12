@@ -10,22 +10,22 @@ import 'package:my_app/Views/Screens/post_item.dart';
 class ProfileScreen extends StatefulWidget {
   final int? userId;
 
-  const ProfileScreen({super.key, this.userId});
+  const ProfileScreen({super.key, this.userId}); // constructor bắt buộc truyền id vào để load ra profile
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+
   final UserController _controller = UserController(); // gọi controller
   final FriendController _friendController = FriendController();
 
-  // === BIẾN THÊM VÀO ĐỂ FIX LỖI REQUEST ID ===
-  Map<int, int> _allRequestIdMap = {}; // Lưu: userId -> requestId (cho cả nhận và gửi)
+  Map<int, int> _allRequestIdMap = {}; // map để lưu  requestId (cho cả nhận và gửi)
 
-  // ===== EDIT USER =====
+  // khai báo các controller  để edit profile 
   bool _isEditing = false;
-  final _editFormKey = GlobalKey<FormState>();
+  final _editFormKey = GlobalKey<FormState>(); // global key để validate
 
   late TextEditingController _editFirstNameCtrl;
   late TextEditingController _editLastNameCtrl;
@@ -40,23 +40,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   bool get isMyProfile =>
       widget.userId == null ||
-      widget.userId == AppSession.instance.myId; // check profile nếu ram đã lưu id
+      widget.userId == AppSession.instance.myId; // check profile nếu ram đã lưu id , không thì trả false  
 
-  // --- HÀM SYNC ĐỂ LẤY REQUEST ID TRƯỚC KHI THỰC HIỆN ---
+  // HÀM SYNC ĐỂ LẤY REQUEST ID TRƯỚC KHI THỰC HIỆN ---
   Future<void> _syncAllRequests() async {
     try {
-      // 1. Lấy lời mời nhận được (Income)
-      final income = await _friendController.incomeRequest();
-      if (income != null) {
-        for (var req in income) {
-          _allRequestIdMap[req['sender']['id']] = req['id'];
+      final income = await _friendController.incomeRequest(); // gọi nhận income request 
+      if (income != null) { // nếu có income 
+        for (var req in income) { // lọc ra và đem vào map 
+          _allRequestIdMap[req['sender']['id']] = req['id']; 
         }
       }
-      // 2. Lấy lời mời đã gửi (Sent) - Để lấy rid cho nút Cancel
-      final sent = await _friendController.outgoingRequest(); 
+      final sent = await _friendController.outgoingRequest(); // gọi nhận outgoing request 
       if (sent != null) {
         for (var req in sent) {
-          _allRequestIdMap[req['receiver']['id']] = req['id'];
+          _allRequestIdMap[req['receiver']['id']] = req['id']; // đem vào map 
         }
       }
     } catch (e) {
@@ -66,14 +64,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _reloadProfile() async { // hàm reload
     await _syncAllRequests(); // Đồng bộ ID trước
-    if (isMyProfile) {
-      _userFuture = _controller.userInfo();
+    if (isMyProfile) { // nếu là mình 
+      _userFuture = _controller.userInfo(); // lấy ra profile mình 
       _postFuture =
-          _userFuture.then((user) => _controller.userPosts(user.id!));
+          _userFuture.then((user) => _controller.userPosts(user.id!)); // lấy ra post mình 
       _friendsFuture =
-          _userFuture.then((user) => _controller.viewFriends(user.id!));
+          _userFuture.then((user) => _controller.viewFriends(user.id!)); // lấy ra bạn mình 
     } else {
-      _userFuture = _controller.viewPage(widget.userId!);
+      // không phải mình thì lấy ra profile và post ngkhac 
+      _userFuture = _controller.viewPage(widget.userId!); 
       _postFuture = _controller.userPosts(widget.userId!);
     }
     setState(() {});
@@ -98,13 +97,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   /// ===== FRIEND BUTTON TEXT =====
   String get friendButtonText {
-    final session = AppSession.instance;
-    final id = widget.userId;
+    final session = AppSession.instance; // lấy ra session
+    final id = widget.userId; // lấy ra id từ profile 
 
     if (id == null) return ''; // hàm check trong ram dựa vào id truyền vào profile và trả về giá trị 
-    if (session.isFriend(id)) return 'Hủy kết bạn';
-    if (session.isSent(id)) return 'Đã gửi';
-    if (session.isReceive(id)) return 'Chờ xác nhận';
+    if (session.isFriend(id)) return 'Hủy kết bạn'; // nếu là bạn thì hiện text hủy kết bạn 
+    if (session.isSent(id)) return 'Đã gửi'; // nếu có id trong map outgoing  thì hiện text hủy kết bạn 
+    if (session.isReceive(id)) return 'Chờ xác nhận'; // nếu có id trong map income thì hiện text 
     return 'Kết bạn';
   }
 
@@ -112,7 +111,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool get canSendRequest { // khả năng nhấn của nút , check nếu là mình thì kh thể ấn gì 
     final id = widget.userId;
     if (id == null) return false;
-    return true;
+    return true; // kh phải mình thì trả true 
   }
 
   
@@ -121,16 +120,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(isMyProfile ? 'Profile' : 'User Profile'),
+        title: Text(isMyProfile ? 'Profile' : 'User Profile'), // nếu là mình thì profile còn k thì user profile 
         actions: [
           if (isMyProfile) // hành động đc build logout nếu là bản thân
             IconButton(
-              icon: const Icon(Icons.logout),
-              onPressed: () async {
-                await TokenStorage.clear();
-                AppSession.instance.clear();
+              icon: const Icon(Icons.logout), // icon 
+              onPressed: () async { 
+                await TokenStorage.clear(); // khi nhấn thì clear storage 
+                AppSession.instance.clear(); // clear luôn cache 
                 if (mounted) {
-                  Navigator.pushNamedAndRemoveUntil(
+                  Navigator.pushNamedAndRemoveUntil( // chuyển trang k quay lại 
                     context,
                     '/login',
                     (_) => false,
@@ -149,20 +148,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
       body: FutureBuilder<UserModel>( // xây dựng dựa vào dữ liệu bất đồng bộ của th object
-        future: _userFuture,
+        future: _userFuture, //theo dõi giá trị userfuture 
         builder: (context, userSnap) {
-          if (userSnap.connectionState == ConnectionState.waiting) {
+          if (userSnap.connectionState == ConnectionState.waiting) { //đang load 
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (userSnap.hasError) {
+          if (userSnap.hasError) { // có lỗi 
             return Center(
               child: Text('Lỗi tải profile: ${userSnap.error}'),
             );
           }
 
           final user = userSnap.data!;
-          if (_isEditing) { // nếu đang edit thì gán dữ liệu vào
+          if (_isEditing) { // nếu đang edit thì gán dữ liệu vào 
             _editFirstNameCtrl =
                 TextEditingController(text: user.firstName);
             _editLastNameCtrl =
@@ -173,28 +172,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 TextEditingController(text: user.phoneNumber ?? '');
             _editDob = user.dateOfBirth;
           }
-        return RefreshIndicator(
-          onRefresh: _reloadProfile, 
-          child: ListView(
+        return RefreshIndicator( // kéo để reload 
+          onRefresh: _reloadProfile,  // gọi hàm reload profile 
+          child: ListView( // dạng list load ra post 
             children: [
               const SizedBox(height: 20),
 
               /// ===== AVATAR =====
-              Center(
-                child: CircleAvatar(
-                  radius: 40,
-                  backgroundImage:
+              Center( // căn giữa 
+                child: CircleAvatar( // ava hình tròn 
+                  radius: 40, // bo tròn 
+                  backgroundImage: // nếu có hình thì load 
                       user.picture != null ? NetworkImage(user.picture!) : null,
-                  child: user.picture == null
+                  child: user.picture == null // nếu k có hình thì hiện icon 
                       ? const Icon(Icons.person, size: 40)
                       : null,
                 ),
               ),
 
-              const SizedBox(height: 10),
+              const SizedBox(height: 10), // xuốn dòng 
 
               /// ===== NAME =====
-              Center(
+              Center( // căn giữa 
                 child: Text(
                   '${user.firstName} ${user.lastName}',
                   style: const TextStyle(
@@ -217,17 +216,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ],
               /// ===== EDIT PROFILE (ADD ONLY) =====
-              if (_isEditing && isMyProfile) ...[
+              if (_isEditing && isMyProfile) ...[ // nếu is edit là true và là profile mình thì 
                 const SizedBox(height: 16),
                 Center(
-                  child: Card(
+                  child: Card( // load ra card giữa màn để edit 
                     elevation: 8,
                     margin: const EdgeInsets.symmetric(horizontal: 20),
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Form(
-                        key: _editFormKey,
-                        child: Column(
+                        key: _editFormKey, // gán key để validate 
+                        child: Column( // dạng hàng 
                           children: [
                             const Text(
                               'Chỉnh sửa thông tin',
@@ -236,8 +235,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-
-                            TextFormField(
+                            //nhận giá trị
+                            TextFormField( 
                               controller: _editFirstNameCtrl,
                               decoration:
                                   const InputDecoration(labelText: 'First name'),
@@ -264,9 +263,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                             const SizedBox(height: 12),
 
-                            ElevatedButton(
-                              onPressed: () async {
-                                final updated = UserModel(
+                            ElevatedButton( // nút nhấn 
+                              onPressed: () async {  // nhấn bất đồng bộ chờ xử lý 
+                                final updated = UserModel( // gọi và gán đối tượng 
                                   id: user.id,
                                   firstName: _editFirstNameCtrl.text,
                                   lastName: _editLastNameCtrl.text,
@@ -275,12 +274,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   dateOfBirth: _editDob,
                                 );
 
-                                await _controller.userModify(
+                                await _controller.userModify( // gọi hàm sửa trong controller 
                                   user.id!,
                                   updated,
                                 );
 
-                                setState(() {
+                                setState(() { // reload 
                                   _isEditing = false;
                                   _userFuture = _controller.userInfo();
                                 });
@@ -303,25 +302,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: ElevatedButton(
                     onPressed: canSendRequest // hàm sẽ check nếu true thì được nếu else thì null
                         ? () async {
-                            final session = AppSession.instance;
+                            final session = AppSession.instance; // lấy ra cache 
                             final id = user.id!;
 
                             // Lấy requestId tương ứng với user đang xem
                             final rId = _allRequestIdMap[id];
 
-                            if (session.isFriend(id)) {
+                            if (session.isFriend(id)) { // nếu là bạn thì có thể hủy và xóa khỏi cache 
                               await _friendController.deleteRequest(id);
                               session.friendIds.remove(id);
                             } 
-                            else if (session.isSent(id)) {
+                            else if (session.isSent(id)) { // lấy ra nếu có id trong sentrequest list và xóa, remove khỏi cache
                               // CANCEL REQUEST - YÊU CẦU RID
                               if (rId != null) {
                                 await _friendController.cancelRequest(rId); 
                                 session.sentRequestIds.remove(id);
                                 _allRequestIdMap.remove(id);
-                              } else {
-                                await _syncAllRequests();
-                                final retryId = _allRequestIdMap[id];
+                              } else { // nếu k có request id thì gọi lại để gán và lấy ra lần nữa 
+                                await _syncAllRequests(); // gọi lại 
+                                final retryId = _allRequestIdMap[id]; //
                                 if (retryId != null) {
                                   await _friendController.cancelRequest(retryId);
                                   session.sentRequestIds.remove(id);
@@ -363,10 +362,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const Divider(),
 
               if (isMyProfile) // load ra ds bạn bè nếu là bản thân 
-                Padding(
+                Padding( // khoảng cách
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: FutureBuilder<List<UserModel>>(
-                    future: _friendsFuture,
+                  child: FutureBuilder<List<UserModel>>( // lấy ra danh sách bạn bè
+                    future: _friendsFuture, // theo dõi list 
                     builder: (context, snap) {
                       if (snap.connectionState == ConnectionState.waiting) {
                         return const Center(
@@ -383,12 +382,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         return const Text('Chưa có bạn bè');
                       }
 
-                      final preview = friends.take(6).toList();
+                      final preview = friends.take(6).toList(); // lấy ra 6 bạn bè đầu tiên để preview
 
-                      return Column(
+                      return Column( // dạng hàng bên trên là text dưới là ava và tên
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
+                          Row( // row chứa text và see all 
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
@@ -414,18 +413,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             itemCount: preview.length,
                             gridDelegate:
                                 const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 3, // các khoảng cách
-                              mainAxisSpacing: 12,
-                              crossAxisSpacing: 12,
-                              childAspectRatio: 0.8,
+                              crossAxisCount: 3, // 3 cột 
+                              mainAxisSpacing: 12, // khoảng cách dọc
+                              crossAxisSpacing: 12, // khoảng cách ngang 
+                              childAspectRatio: 0.8, // tỉ lệ khung hình 
                             ),
                             itemBuilder: (_, i) { // lấy ra từng profile và truyền vào profile build ra
                               final f = preview[i];
-                              return InkWell( // hiệu ứng ấn
+                              return InkWell( // hiệu ứng khi nhấn 
                                 borderRadius:
                                     BorderRadius.circular(12),
                                 onTap: () {
-                                  Navigator.push(
+                                  Navigator.push( // nhấn vào bạn bè chuyển sang profile
                                     context,
                                     MaterialPageRoute(
                                       builder: (_) => ProfileScreen(
@@ -466,7 +465,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
 
               /// ===== POSTS =====
-              FutureBuilder<List<PostModel>>(
+              FutureBuilder<List<PostModel>>( // hàm trả về post và load ra post trong post item 
                 future: _postFuture,
                 builder: (_, postSnap) {
                   if (postSnap.connectionState ==
@@ -489,13 +488,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     );
                   }
 
-                  return ListView.builder(
-                    shrinkWrap: true,
+                  return ListView.builder( // load ra post dạng listview 
+                    shrinkWrap: true, // cho phép listview 
                     physics:
-                        const NeverScrollableScrollPhysics(),
+                        const NeverScrollableScrollPhysics(), // ko scroll 
                     itemCount: posts.length,
                     itemBuilder: (_, i) =>
-                        PostItem(post: posts[i]),
+                        PostItem(post: posts[i]), // truyền vào n post trong post item build ra 
                   );
                 },
               ),

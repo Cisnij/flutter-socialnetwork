@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-class ThemeController extends ChangeNotifier {
-  ThemeMode _themeMode = ThemeMode.light;
+class ThemeController extends ChangeNotifier { // controller chuyển theme
+  ThemeMode _themeMode = ThemeMode.light; // mặc định theme sáng 
 
-  ThemeMode get themeMode => _themeMode;
+  ThemeMode get themeMode => _themeMode; // lấy ra theme hiện tại 
 
-  bool get isDark => _themeMode == ThemeMode.dark;
+  bool get isDark => _themeMode == ThemeMode.dark; // kiểm tra có phải theme tối không, nếu có trả true 
 
   void toggleTheme() {
     _themeMode =

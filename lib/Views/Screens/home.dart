@@ -62,7 +62,7 @@ class _MainScreenState extends State<MainScreen> {
           });
         },
         type: BottomNavigationBarType.fixed, // cố định khi scroll
-        items: const [
+        items: const [ // các item và icon tương ứng
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
             label: 'Home',

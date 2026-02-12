@@ -4,22 +4,22 @@ import 'package:my_app/Services/AuthService.dart';
 class UserService{
 
   Future<http.Response> userInformation() async{
-    return await authGet(url: 'http://localhost:8000/api/user/');
+    return await authGet(url: 'http://localhost:8000/api/user/'); //ok 
   }
   Future<http.Response> userPost(int id) async{
-    return await authGet(url: 'http://localhost:8000/api/user/post/userpage/$id/');
+    return await authGet(url: 'http://localhost:8000/api/user/post/userpage/$id/'); //ok
   }
   Future<http.Response> viewPage(int id) async{
-    return await authGet(url: 'http://localhost:8000/api/auth/profile/userpage/$id');
+    return await authGet(url: 'http://localhost:8000/api/auth/profile/userpage/$id'); //ok
   }
   Future<http.Response> userModify(Map<String, dynamic> jsonData, int id) async{
-    return await authPut(url: 'http://localhost:8000/api/user/profile/$id/', body: jsonData);
+    return await authPut(url: 'http://localhost:8000/api/user/profile/$id/', body: jsonData); //ok
   }
   Future<http.Response> viewFriends(int id) async{
-    return await authGet(url: 'http://localhost:8000/api/friends/$id/');
+    return await authGet(url: 'http://localhost:8000/api/friends/$id/'); //ok
   }
 
   Future<http.Response> search(String name) async{
-    return await authGet(url: 'http://localhost:8000/api/user/profile/?last_name=$name');
+    return await authGet(url: 'http://localhost:8000/api/user/profile/?last_name=$name'); //ok
   }
 }

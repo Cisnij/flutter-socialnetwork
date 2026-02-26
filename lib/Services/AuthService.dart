@@ -3,12 +3,12 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:my_app/Services/TokenStorage.dart';
 
-Future<String?> refreshAccessToken() async {
+Future<String?> refreshAccessToken() async { // hàm lấy access token mới 
   
   final refreshToken = await TokenStorage.getRefreshToken();// Lấy refresh token đã lưu
-  if (refreshToken == null) return null;
+  if (refreshToken == null) return null; //check
 
-  final url = Uri.parse(
+  final url = Uri.parse( // gọi url refresh
     'http://localhost:8000/api/auth/token/refresh/',
   );
 
@@ -18,7 +18,7 @@ Future<String?> refreshAccessToken() async {
       "Content-Type": "application/json",
     },
     body: jsonEncode({
-      "refresh": refreshToken,
+      "refresh": refreshToken, // truyền body vào
     }),
   );
 
@@ -26,7 +26,7 @@ Future<String?> refreshAccessToken() async {
     final data = jsonDecode(response.body);
     final newAccess = data['access'];
 
-    await TokenStorage.saveTokens(
+    await TokenStorage.saveTokens( // lưu vào
       access: newAccess,
       refresh: refreshToken,
     );
@@ -38,8 +38,8 @@ Future<String?> refreshAccessToken() async {
 //==================POST====================================================
 // hàm gọi post đảm bảo luôn trong trạng thái bảo mật login token, ? ở map để cho phép null
 Future<http.Response> authFetch({required String url, Map<String, dynamic>? body, bool retry = true}) async { // bool retry tránh loop vô hạn, chỉ lặp 1 lần, và nếu gọi lại thì retry false đẻ không lặp nữa
-  final accessToken = await TokenStorage.getAccessToken();
-  final response = await http.post(
+  final accessToken = await TokenStorage.getAccessToken(); //lấy token trong máy
+  final response = await http.post( // thử gọi lần 1 
     Uri.parse(url),
     headers: {
       "Content-Type": "application/json",
@@ -52,7 +52,7 @@ Future<http.Response> authFetch({required String url, Map<String, dynamic>? body
   if (response.statusCode == 401 && retry) {// Nếu access hết hạn và chưa thử lại lần nào tức retry = True thì refresh access và post lại
     final newAccess = await refreshAccessToken();
 
-    if (newAccess != null) { // khác null là thành công
+    if (newAccess != null) { // nếu có token khi refresh thì gọi lại lần 2 
       return authFetch(
         url: url,
         body: body,

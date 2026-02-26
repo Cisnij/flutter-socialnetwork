@@ -1,8 +1,8 @@
 class UserModel {
   final int? id;
 
-  String firstName;
-  String lastName;
+  String? firstName;
+  String? lastName;
   String? bio; // ? là có thể null
   String? picture;
   String? phoneNumber;
@@ -21,8 +21,8 @@ class UserModel {
   factory UserModel.fromJson(Map<String, dynamic> json) { //nhận về và gán vào object
     return UserModel(
       id: json['id'],
-      firstName: json['first_name'],
-      lastName: json['last_name'],
+      firstName: json['first_name'] ?? '',
+      lastName: json['last_name'] ?? '',
       bio: json['bio'],
       picture: json['picture'],
       phoneNumber: json['phone_number'],

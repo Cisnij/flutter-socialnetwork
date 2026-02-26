@@ -50,10 +50,8 @@ class LoginController {
           refresh: data['refresh'],
         );
 
-        await FirebaseService.init(); // khởi tạo firebase
-        String? token = await FirebaseMessaging.instance.getToken();
-        print("🔥 FCM TOKEN SAU LOGIN: $token");
-
+        // await FirebaseService.init(); // khởi tạo firebase
+        // String? token = await FirebaseMessaging.instance.getToken();
         await TokenStorage.saveId(id: data['user']['pk'].toString());
         await TokenStorage.saveUsername(username: data['user']['username']);
         isLoading=false;

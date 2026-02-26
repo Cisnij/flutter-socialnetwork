@@ -23,8 +23,7 @@ class MessageModel {
   });
 
   // lấy username để phân biệt bubble trái/phải
-  String get senderUsername =>
-      sender?['user']?['username'] ?? sender?['username'] ?? '';
+  String get senderUsername => sender?['id']?.toString() ?? '';
 
   // lấy tên hiển thị trong bubble
   String get senderName {
@@ -68,7 +67,7 @@ class _ChatService {
   Future<void> connect(int conversationId) async {
     final token = await TokenStorage.getAccessToken();
     // token qua query param vì WebSocket không có Authorization header
-    final uri = Uri.parse('ws://192.168.1.7:8000/ws/chat/$conversationId/?token=$token');
+    final uri = Uri.parse('ws://localhost:8000/ws/chat/$conversationId/?token=$token');
     _channel = WebSocketChannel.connect(uri);
 
     _channel!.stream.listen(
@@ -102,7 +101,7 @@ class _ChatService {
 
 // ===== CONTROLLER =====
 class ChatController {
-  static const String _base = 'http://192.168.1.7:8000';
+  static const String _base = 'http://localhost:8000';
 
   // WebSocket service dùng nội bộ, ChatScreen lấy qua getter
   final _chatService = _ChatService();

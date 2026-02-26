@@ -6,7 +6,7 @@ import 'package:my_app/Services/TokenStorage.dart';
 
 class PostService {
 Future<http.Response> createPost({required String title,List<File> images = const [],}) async {
-  final uri = Uri.parse('http://localhost:8000/api/user/post/create/');
+  final uri = Uri.parse('http://localhost:8000/api/user/post/create/v2/');
   final request = http.MultipartRequest('POST', uri); // post dạng multipart cho truyền file
   final token = await TokenStorage.getAccessToken(); //lấy token xác thực
   request.headers['Authorization'] = 'Bearer $token';// thêm headers

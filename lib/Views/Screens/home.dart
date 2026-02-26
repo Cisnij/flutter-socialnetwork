@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:my_app/Services/FirebaseService.dart';
+import 'package:my_app/Services/TokenStorage.dart';
 import 'package:my_app/Views/Screens/addfriend.dart';
 import 'package:my_app/Views/Screens/profile.dart';
 import 'package:my_app/Views/Screens/incomefriend.dart';
+import 'package:my_app/Views/Screens/chat-detail.dart';
 import 'feed.dart';
 import 'package:my_app/Views/Screens/cache.dart';
 
@@ -10,13 +12,13 @@ class MainScreen extends StatefulWidget { // thanh navigationbar
   const MainScreen({Key? key}) : super(key: key);
 
   @override
-  State<MainScreen> createState() => _MainScreenState();
+  State<MainScreen> createState() => _MainScreenState(); 
 }
 
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
-  bool _sessionReady = false;
-  late final List<Widget> _screens;
+  bool _sessionReady = false; // xử lý trạng thái session
+  late final List<Widget> _screens; // khai báo list screen
 
   
   @override
@@ -28,15 +30,15 @@ class _MainScreenState extends State<MainScreen> {
 
   Future<void> _initSession() async {
     await AppSession.instance.init();
-    // await FirebaseService.init(); // khởi tạo firebase
-    if (mounted) {
+    if (mounted) { // nếu đã có widget 
       setState(() {
-        _sessionReady = true;
+        _sessionReady = true; //
         _screens = [
           FeedScreen(),
           FriendSuggestScreen(),
           RequestsScreen(),
           ProfileScreen(),
+          ChatTabScreen(),
         ];
       });
     }
@@ -78,6 +80,10 @@ class _MainScreenState extends State<MainScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.person),
             label: 'Profile',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.chat),
+            label: 'Chat',
           ),
         ],
       ),

@@ -75,9 +75,7 @@ class _CommentSheetState extends State<CommentSheet> {
     }
   }
 
-  /// ===============================================================
   /// DELETE COMMENT (CHỈ OWNER)
-  /// ===============================================================
   Future<void> _deleteComment(int commentId) async { // hàm xóa comment
     final ok = await _commentController.delComment(commentId);
 
@@ -92,9 +90,7 @@ class _CommentSheetState extends State<CommentSheet> {
     }
   }
 
-  /// ===============================================================
   /// FORMAT DATE
-  /// ===============================================================
     String _formatDate(String? raw) {
       if (raw == null) return '';
       final dt = DateTime.tryParse(raw);
@@ -166,7 +162,7 @@ class _CommentSheetState extends State<CommentSheet> {
             const Divider(height: 1), 
 
             /// ================= LIST COMMENT =================
-            Expanded( // phần mở rộng
+            Expanded( // vùng chiếm hết của column
               child: _isLoading // nếu loading true thì load thanh xoay
                   ? const Center(child: CircularProgressIndicator())
                   : _comments.isEmpty // load mà k có dữ liệu trong list thì in ra chữ
@@ -189,7 +185,7 @@ class _CommentSheetState extends State<CommentSheet> {
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start, //bắt đầu ngoài cùng đi vào
                                 children: [
-                                  CircleAvatar( //load background
+                                  CircleAvatar( //load ava
                                     radius: 18,
                                     backgroundImage: u?.picture != null
                                         ? NetworkImage(u!.picture!)

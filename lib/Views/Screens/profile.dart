@@ -76,7 +76,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _postFuture = _controller.userPosts(widget.userId!);
     }
     setState(() {});
-}
+  }
 
   @override
   void initState() {
@@ -114,7 +114,90 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return true; // kh phải mình thì trả true 
   }
 
-  
+  /// ===== SHOW ALL FRIENDS MODAL =====
+  void _showAllFriends(List<UserModel> friends) {
+    showDialog( // mở dialog giữa màn hình
+      context: context,
+      builder: (_) => Dialog( // Dialog tự căn giữa màn hình
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16), // bo góc
+        ),
+        child: Container(
+          width: double.maxFinite, // chiều rộng tối đa
+          height: MediaQuery.of(context).size.height * 0.6, // chiều cao 60% màn hình
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              // header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Bạn bè · ${friends.length}',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  IconButton( // nút đóng
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const Divider(),
+              // danh sách bạn bè
+              Expanded( // chiếm hết không gian còn lại trong Column
+                child: GridView.builder(
+                  itemCount: friends.length, // tất cả bạn bè thay vì chỉ 6
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3, // 3 cột
+                    mainAxisSpacing: 12, // khoảng cách dọc
+                    crossAxisSpacing: 12, // khoảng cách ngang
+                    childAspectRatio: 0.8, // tỉ lệ khung hình
+                  ),
+                  itemBuilder: (_, i) {
+                    final f = friends[i];
+                    return InkWell( // hiệu ứng khi nhấn
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () {
+                        Navigator.pop(context); // đóng dialog trước
+                        Navigator.push( // rồi chuyển sang profile
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ProfileScreen(userId: f.id),
+                          ),
+                        );
+                      },
+                      child: Column(
+                        children: [
+                          CircleAvatar(
+                            radius: 30,
+                            backgroundImage: f.picture != null
+                                ? NetworkImage(f.picture!)
+                                : null,
+                            child: f.picture == null
+                                ? const Icon(Icons.person)
+                                : null,
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            f.firstName ?? '',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -215,7 +298,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
               ],
-              /// ===== EDIT PROFILE (ADD ONLY) =====
+              /// ===== EDIT PROFILE  =====
               if (_isEditing && isMyProfile) ...[ // nếu is edit là true và là profile mình thì 
                 const SizedBox(height: 16),
                 Center(
@@ -398,7 +481,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                               ),
                               TextButton(
-                                onPressed: () {},
+                                onPressed: () => _showAllFriends(friends), // ← gọi hàm mở dialog toàn bộ bạn bè
                                 child: const Text('See all'),
                               ),
                             ],

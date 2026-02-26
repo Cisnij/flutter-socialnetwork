@@ -34,10 +34,14 @@ class TokenStorage {
     return _storage.read(key: 'userId');
   }
   Future<void> logout(BuildContext context) async {
-  const storage = FlutterSecureStorage();
-  await storage.delete(key: 'access_token'); 
-  Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
-}
+    const storage = FlutterSecureStorage();
+    await storage.delete(key: 'access_token'); 
+    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+  }
+  static Future<void> saveUsername({required String username}) async {
+    await _storage.write(key: 'username', value: username);
+  }
+  static Future<String?> getUsername() => _storage.read(key: 'username');
 }
 
 //cách dùng TokenStorage.getAccessToken hay TokenStorage.saveTokens 

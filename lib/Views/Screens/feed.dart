@@ -29,37 +29,38 @@ class _FeedScreenState extends State<FeedScreen> {
   // === NOTIFICATION ADD ===
   List<InAppNotification> _notis = [];
 
-      String _formatDate(String? raw) { //parse thời gian
-      if (raw == null) return '';
-      final dt = DateTime.tryParse(raw);
-      if (dt == null) return '';
+  // Date format 
+  String _formatDate(String? raw) { //parse thời gian
+    if (raw == null) return '';
+    final dt = DateTime.tryParse(raw);
+    if (dt == null) return '';
 
-      final now = DateTime.now();
-      final diff = now.difference(dt);
+    final now = DateTime.now();
+    final diff = now.difference(dt);
 
-      if (diff.inSeconds < 10) {
-        return 'Vừa xong';
-      }
-
-      if (diff.inSeconds < 60) {
-        return '${diff.inSeconds} giây trước';
-      }
-
-      if (diff.inMinutes < 60) {
-        return '${diff.inMinutes} phút trước';
-      }
-
-      if (diff.inHours < 24) {
-        return '${diff.inHours} giờ trước';
-      }
-
-      if (diff.inDays < 7) {
-        return '${diff.inDays} ngày trước';
-      }
-
-      final weeks = (diff.inDays / 7).floor();
-      return '$weeks tuần trước';
+    if (diff.inSeconds < 10) {
+      return 'Vừa xong';
     }
+
+    if (diff.inSeconds < 60) {
+      return '${diff.inSeconds} giây trước';
+    }
+
+    if (diff.inMinutes < 60) {
+      return '${diff.inMinutes} phút trước';
+    }
+
+    if (diff.inHours < 24) {
+      return '${diff.inHours} giờ trước';
+    }
+
+    if (diff.inDays < 7) {
+      return '${diff.inDays} ngày trước';
+    }
+
+    final weeks = (diff.inDays / 7).floor();
+    return '$weeks tuần trước';
+  }
 
   @override
   void initState() {
@@ -68,112 +69,124 @@ class _FeedScreenState extends State<FeedScreen> {
     _loadNoti(); //gọi hàm 
   }
 
-  // THÊM POST
-  Future<void> _pickImages() async { // hàm chọn ảnh từ thiết bị 
-    final picker = ImagePicker();
-    final files = await picker.pickMultiImage(imageQuality: 80);
-    if (files != null) {
-      setState(() {
-        _selectedImages = files.map((e) => File(e.path)).toList();
-      });
-    }
-  }
   void _openCreatePost() { // hàm mở dialog khung chọn ảnh 
-  showDialog(
-    context: context,
-    builder: (_) {
-      return AlertDialog(
-        title: const Text('Tạo bài viết'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _postController, // gọi controller control text
-              maxLines: 4,
-              decoration: const InputDecoration(
-                hintText: 'Bạn đang nghĩ gì?',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 10),
-
-            if (_selectedImages.isNotEmpty)
-              SizedBox(
-                height: 80,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _selectedImages.length,
-                  itemBuilder: (_, i) => Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: Image.file(
-                      _selectedImages[i],
-                      width: 80,
-                      fit: BoxFit.cover,
+    showDialog(
+      context: context,
+      builder: (_) {
+        return StatefulBuilder( // StatefulBuilder tạo setState riêng cho dialog
+          builder: (context, setDialogState) { // setDialogState chỉ rebuild bên trong dialog
+            return AlertDialog(
+              title: const Text('Tạo bài viết'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min, // co lại vừa đủ không chiếm hết không gian bên trong column
+                children: [
+                  TextField(
+                    controller: _postController, // gọi controller control text
+                    maxLines: 4,
+                    decoration: const InputDecoration(
+                      hintText: 'Bạn đang nghĩ gì?',
+                      border: OutlineInputBorder(), // chỉ có viền không có màu trong suốt
                     ),
                   ),
-                ),
+                  const SizedBox(height: 10),
+
+                  if (_selectedImages.isNotEmpty) // nếu không đang trạng thái chỉnh ảnh 
+                    SizedBox( // giới hạn kích thước th con
+                      height: 80, // giới hạn chiều cao 80px
+                      width: double.maxFinite, // ← báo cho Flutter biết chiều rộng tối đa, tránh lỗi layout khi ListView nằm trong Column của dialog
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal, // cuộn ngang thay vì dọc 
+                        itemCount: _selectedImages.length,
+                        itemBuilder: (_, i) => Padding( // build ra từng ảnh của th con có khoảng cách
+                          padding: const EdgeInsets.only(right: 8), //margin
+                          child: Image.file( // hiển thị file ảnh cục bộ của i trong n ảnh
+                            _selectedImages[i],
+                            width: 80, // chiều rộng 80px
+                            fit: BoxFit.cover, // lấp đầy , phần thừa bị cắt 
+                          ),
+                        ),
+                      ),
+                    ),
+
+                  TextButton.icon( // button chứa text 
+                    icon: const Icon(Icons.photo),
+                    label: const Text('Chọn ảnh'),
+                    onPressed: () async { // inline async để dùng được setDialogState
+                      final picker = ImagePicker();
+                      final files = await picker.pickMultiImage(imageQuality: 80); // hàm picket lấy nhiều ảnh
+                      if (files != null && files.isNotEmpty) {
+                        setDialogState(() { // ← phải dùng setDialogState thay vì setState
+                          // setState() → rebuild FeedScreen → dialog không thấy
+                          // setDialogState() → rebuild dialog → ảnh hiển thị ngay ✅
+                          _selectedImages = files.map((e) => File(e.path)).toList(); // đưa vào parse sang list
+                        });
+                      }
+                    },
+                  ),
+                ],
               ),
-
-            TextButton.icon(
-              icon: const Icon(Icons.photo),
-              label: const Text('Chọn ảnh'),
-              onPressed: _pickImages, // nhấn icon sẽ chọn ảnh
-            ),
-          ],
-        ),
-        actions: [
-          TextButton( // nút hủy hết dữ liệu và đóng 
-            onPressed: () {
-              _postController.clear();
-              _selectedImages.clear();
-              Navigator.pop(context);
-            },
-            child: const Text('Hủy'),
-          ),
-          ElevatedButton( // nút gọi controller tạo post, 
-            onPressed: _posting ? null : _submitPost,
-            child: _posting
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Đăng'),
-          ),
-        ],
-      );
-    },
-  );
-}
-Future<void> _submitPost() async { // hàm gọi controller submit 
-  final text = _postController.text.trim();
-  if (text.isEmpty && _selectedImages.isEmpty) return;
-
-  setState(() => _posting = true); // bật trạng thái đang đăng để disable nút và show loading
-
-  try {
-    final post = await _controller.createPost( // gọi troller truyền vào file 
-      title: text,
-      images: _selectedImages,
+              actions: [
+                TextButton( // nút hủy hết dữ liệu và đóng 
+                  onPressed: () {
+                    _postController.clear();
+                    setDialogState(() => _selectedImages.clear()); // dùng setDialogState để clear ảnh preview
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Hủy'),
+                ),
+                ElevatedButton( // nút gọi controller tạo post
+                  onPressed: _posting ? null : () => _submitPost(setDialogState), // ← truyền setDialogState vào để dialog biết trạng thái loading
+                  child: _posting
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Đăng'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
-
-    setState(() { // thành công thì load lại trang 
-      _posts.insert(0, post); // thêm vào list post mới ở vị trí 0
-      _postController.clear(); // xóa hết text và ảnh 
-      _selectedImages.clear();
-    });
-
-    Navigator.pop(context); // đóng khung
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(e.toString())), // báo lỗi nếu có res
-    );
-  } finally {
-    setState(() => _posting = false);
   }
-}
 
+  Future<void> _submitPost(StateSetter setDialogState) async { // hàm gọi controller submit, nhận setDialogState để cập nhật dialog
+    final text = _postController.text.trim();
+    if (text.isEmpty && _selectedImages.isEmpty) return;
 
+    // cập nhật cả 2 để dialog biết đang loading, tránh nhấn nhiều lần gây conflict
+    setDialogState(() => _posting = true);
+    setState(() => _posting = true);
+
+    try {
+      final post = await _controller.createPost( // gọi troller truyền vào file 
+        title: text,
+        images: _selectedImages,
+      );
+
+      setState(() { // thành công tạo bài post mới thì load lại trang 
+        _posts.insert(0, post); // thêm vào list post mới ở vị trí 0
+        _postController.clear(); // xóa hết text và ảnh 
+        _selectedImages.clear();
+      });
+
+      if (mounted) Navigator.pop(context); // check mounted trước khi pop tránh lỗi khi widget đã bị dispose
+
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())), // báo lỗi nếu có res
+        );
+      }
+    } finally {
+      if (mounted) {
+        setDialogState(() => _posting = false); // tắt loading ở dialog
+        setState(() => _posting = false); // tắt loading ở feedscreen
+      }
+    }
+  }
 
   // === NOTIFICATION ADD ===
   Future<void> _loadNoti() async {
@@ -184,6 +197,7 @@ Future<void> _submitPost() async { // hàm gọi controller submit
       });
     } catch (_) {}
   }
+
   void _showNoti() {
     showModalBottomSheet( // mở ô bên dưới 
       context: context,
@@ -229,7 +243,7 @@ Future<void> _submitPost() async { // hàm gọi controller submit
       appBar: AppBar( // thanh bar dài phía trên
         title: Text('Home'),
         actions: [          
-         IconButton(
+          IconButton(
             icon: Icon(
               Theme.of(context).brightness == Brightness.dark // giá trị khi nhấn sẽ chuyển icon
                   ? Icons.light_mode
@@ -298,7 +312,7 @@ Future<void> _submitPost() async { // hàm gọi controller submit
             return const Center(child: Text('Lỗi load feed'));
           }
 
-           if (!_initialized) {
+          if (!_initialized) {
             _posts = List.from(snapshot.data!); // để snapshot gán lại data mỗi khi refresh, vì mặc định khi đc gọi snapshot data vẫn còn cũ
             _initialized = true;
           }

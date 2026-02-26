@@ -13,13 +13,14 @@ class FriendSuggestScreen extends StatefulWidget {
 }
 
 class _FriendSuggestScreenState extends State<FriendSuggestScreen> {
+
+  // gọi controller 
   final UserController _controller = UserController();
   final FriendController _friendController = FriendController();
 
-  List<UserModel> _users = [];
+  List<UserModel> _users = []; // khởi tạo list user 
   bool _loading = false;
-
-  // ✅ KHỞI TẠO NGAY TẠI ĐÂY ĐỂ TRÁNH LỖI NULL
+  // khởi tạo tất cả request kể cả gửi và nhận
   Map<int, int> _allRequestIdMap = <int, int>{}; 
 
   @override
@@ -30,15 +31,14 @@ class _FriendSuggestScreenState extends State<FriendSuggestScreen> {
     _syncAllRequests();
   }
 
-  Future<void> _syncAllRequests() async {
+  Future<void> _syncAllRequests() async { // hàm lấy lại tất cả income và sent 
     try {
       final income = await _friendController.incomeRequest();
       final sent = await _friendController.outgoingRequest();
-      
       // Tạo một map tạm thời để tránh xung đột kiểu dữ liệu
       final Map<int, int> tempMap = {};
 
-      if (income != null) {
+      if (income != null) { // nếu income không null thì đem vào temp map và lấy ra user và id 
         for (var req in income) {
           if (req['sender'] != null && req['sender']['id'] != null) {
             tempMap[req['sender']['id']] = req['id'];
@@ -46,7 +46,7 @@ class _FriendSuggestScreenState extends State<FriendSuggestScreen> {
         }
       }
 
-      if (sent != null) {
+      if (sent != null) { // // nếu sent không null thì đem vào temp map và lấy ra user và id 
         for (var req in sent) {
           if (req['receiver'] != null && req['receiver']['id'] != null) {
             tempMap[req['receiver']['id']] = req['id'];
@@ -54,7 +54,7 @@ class _FriendSuggestScreenState extends State<FriendSuggestScreen> {
         }
       }
 
-      if (mounted) {
+      if (mounted) { // chống lỗi khi tải, đảm bảo còn widget trước khi gọi set state vẽ lại UI
         setState(() {
           _allRequestIdMap = tempMap;
         });
@@ -64,8 +64,8 @@ class _FriendSuggestScreenState extends State<FriendSuggestScreen> {
     }
   }
 
-  Future<void> _search(String name) async {
-    if (name.isEmpty) {
+  Future<void> _search(String name) async { //hàm search user 
+    if (name.isEmpty) { //check điều kiện 
       setState(() => _users = []);
       return;
     }
@@ -73,8 +73,8 @@ class _FriendSuggestScreenState extends State<FriendSuggestScreen> {
     try {
       // Luôn đảm bảo sync lại ID trước khi hiện kết quả search
       await _syncAllRequests(); 
-      final result = await _controller.searchUser(name);
-      setState(() => _users = result ?? []);
+      final result = await _controller.searchUser(name); // gọi controller để search tên 
+      setState(() => _users = result ?? []); 
     } catch (e) {
       debugPrint("Search error: ${e.toString()}");
     }
@@ -87,50 +87,51 @@ class _FriendSuggestScreenState extends State<FriendSuggestScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Kết bạn'), centerTitle: true),
-      body: Column(
+      body: Column( // tất cả bọc trong column theo hàng
         children: [
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: TextField(
+          Padding( // tạo khoảng trông xung quanh widget con 
+            padding: const EdgeInsets.all(12), // padding đều 12px 
+            child: TextField( // trường text để nhập 
               onChanged: _search,
               decoration: InputDecoration(
-                hintText: 'Tìm bạn theo tên...',
+                hintText: 'Tìm bạn theo tên...', 
                 prefixIcon: const Icon(Icons.search),
-                filled: true,
+                filled: true, // được phép thay đổi màu
                 fillColor: Colors.grey.shade100,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none), // dạng ô bo tròn
               ),
             ),
           ),
-          Expanded(
-            child: _loading
-                ? const Center(child: CircularProgressIndicator())
+          Expanded( // chiếm hết phần còn lại trong column 
+            child: _loading // nếu loading là true
+                ? const Center(child: CircularProgressIndicator()) 
                 : _users.isEmpty
                     ? const Center(child: Text('Không có kết quả'))
-                    : ListView.builder(
-                        itemCount: _users.length,
-                        itemBuilder: (_, i) {
-                          final user = _users[i];
-                          final int? id = user.id;
-                          if (id == null) return const SizedBox.shrink();
+                    : ListView.builder( // tạo widget danh sách cuộn 
+                        itemCount: _users.length, // số lượng user trong mảng
+                        itemBuilder: (_, i) { // build user thành n widget và khi nhấn sẽ nhớ id để gọi profile 
+                          final user = _users[i];  // lấy user từ thứ i trong list 
+                          final int? id = user.id; // lấy user id 
+                          if (id == null) return const SizedBox.shrink(); // nếu null thì không render gì 
 
-                          // ✅ LẤY RID AN TOÀN: Nếu map null thì rId cũng null
+                          //LẤY RID AN TOÀN: Nếu map null thì rId cũng null
                           final int? rId = _allRequestIdMap[id];
 
-                          return ListTile(
-                            leading: GestureDetector(
+                          return ListTile( // listtile là widget cột, giống list view nhưng chia theo 3 cột  
+                            leading: GestureDetector( // theo dỗi tap 
                               onTap: () {
-                                Navigator.push(context, MaterialPageRoute(builder: (_) => ProfileScreen(userId: id)));
+                                Navigator.push(context, MaterialPageRoute(builder: (_) => ProfileScreen(userId: id))); // nhấn thì lấy user id đó gọi load ra profile
                               },
-                              child: CircleAvatar(
+                              child: CircleAvatar( // avatar tròn
                                 backgroundImage: user.picture != null ? NetworkImage(user.picture!) : null,
                                 child: user.picture == null ? const Icon(Icons.person) : null,
                               ),
                             ),
                             title: Text('${user.firstName} ${user.lastName}', style: const TextStyle(fontWeight: FontWeight.w600)),
-                            trailing: Builder(
+
+                            trailing: Builder( // nút bấm dùng cho list tile ở hàng ngang 3 
                               builder: (_) {
-                                if (session.isMe(id)) return const SizedBox.shrink();
+                                if (session.isMe(id)) return const SizedBox.shrink(); // return nothing nếu là mình 
 
                                 // 1. Bạn bè -> Unfriend (Dùng id)
                                 if (session.isFriend(id)) {
@@ -164,7 +165,7 @@ class _FriendSuggestScreenState extends State<FriendSuggestScreen> {
 
                                 // 3. Đã gửi -> Cancel (Dùng rId)
                                 if (session.isSent(id)) {
-                                  return OutlinedButton(
+                                  return OutlinedButton( // nút bấm nền trong suốt 
                                     onPressed: () async {
                                       if (rId != null) {
                                         await _friendController.cancelRequest(rId);
@@ -179,7 +180,7 @@ class _FriendSuggestScreenState extends State<FriendSuggestScreen> {
                                 }
 
                                 // 4. Người lạ -> Add (Dùng id)
-                                return ElevatedButton(
+                                return ElevatedButton( // nút bấm có màu 
                                   onPressed: () async {
                                     await _friendController.sendRequest(id);
                                     session.sentRequestIds.add(id);

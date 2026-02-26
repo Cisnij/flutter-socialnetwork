@@ -7,10 +7,17 @@ import 'package:my_app/Views/Screens/home.dart';
 import 'package:my_app/Views/login.dart';
 import 'package:my_app/Views/Screens/feed.dart';
 import 'package:provider/provider.dart';
-
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 void main() async{
   WidgetsFlutterBinding.ensureInitialized(); // đảm bảo flutter đã khởi tạo xong
-  // await Firebase.initializeApp(); // hàm khởi tạo firebase
+
+  // // await Firebase.initializeApp(); // hàm khởi tạo firebase
+  // FirebaseMessaging.onMessage.listen((RemoteMessage message) {// app đang mở → tự show bằng local notification hoặc snackbar
+  //   print("📩 Foreground message: ${message.notification?.title}");
+  // });
+
+
   runApp(
     ChangeNotifierProvider( // cung cấp theme sáng tối  cho toàn app
       create: (_) => ThemeController(), // khởi tạo controller 

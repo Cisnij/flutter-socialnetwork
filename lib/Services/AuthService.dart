@@ -9,7 +9,7 @@ Future<String?> refreshAccessToken() async {
   if (refreshToken == null) return null;
 
   final url = Uri.parse(
-    'http://10.0.2.2:8000/api/auth/token/refresh/',
+    'http://localhost:8000/api/auth/token/refresh/',
   );
 
   final response = await http.post(

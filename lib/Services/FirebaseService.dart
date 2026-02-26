@@ -7,10 +7,11 @@ import 'package:http/http.dart' as http;
 import 'package:my_app/Services/TokenStorage.dart';
 
 class FirebaseService {
-  static final FirebaseMessaging _fcm = FirebaseMessaging.instance;
+  static final FirebaseMessaging _fcm = FirebaseMessaging.instance; // gọi instance của package 
 
   static const String _baseUrl = "http://localhost:8000/";
 
+ // HÀM KHỞI TẠO LẦN ĐẦU VÀ NẾU FIREBASE CÓ ĐỔI TOKEN THÌ ĐỔI THEO
   static Future<void> init() async {
     // Xin quyền (iOS)
     await _fcm.requestPermission(
@@ -18,29 +19,24 @@ class FirebaseService {
       badge: true,
       sound: true,
     );
-
     // Lấy token lần đầu
     final token = await _fcm.getToken(); // hàm lấy token của firebase
     if (token != null) {
       await _sendTokenToBackend(token); // gửi token lên backend
     }
-
-    // Token refresh (BẮT BUỘC)
+    // Token refresh 
     FirebaseMessaging.instance.onTokenRefresh.listen((newToken) { // lắng nghe sự kiện khi firebase đổi token, sẽ gọi để lưu lại 
       _sendTokenToBackend(newToken);
     });
   }
 
-  /// =========================
-  /// SEND TOKEN TO BACKEND
-  /// =========================
-  /// 
+  /// HÀM GỬI TOKEN TO BACKEND
   static Future<void> _sendTokenToBackend(String token) async {
     try {
       final accessToken = await TokenStorage.getAccessToken(); // lấy access Token đảm bảo đang đăng nhập
       if (accessToken == null) return;
 
-      final uri = Uri.parse("$_baseUrl/fcm/token/");
+      final uri = Uri.parse("$_baseUrl/fcm-token/");
 
       await http.post(
         uri,

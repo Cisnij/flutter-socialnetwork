@@ -80,7 +80,7 @@ class _PostItemState extends State<PostItem> {
 
 
     return Card( // dạng card cho post
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), // khoảng cách margin card
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), // khoảng cách margin card , trên dưới 6, trái phải 12 
       elevation: 1.5, // đổ bóng
       shape: RoundedRectangleBorder( // bo góc card
         borderRadius: BorderRadius.circular(12),
@@ -88,7 +88,7 @@ class _PostItemState extends State<PostItem> {
       child: Padding(
         padding: const EdgeInsets.all(12), // padding trong card
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start, // căn trái
+          crossAxisAlignment: CrossAxisAlignment.start, // căn trái padding
           children: [
 
             /// ================= USER HEADER =================
@@ -174,7 +174,7 @@ class _PostItemState extends State<PostItem> {
                       backgroundColor: Colors.black,
                       insetPadding: EdgeInsets.zero,
                       child: InteractiveViewer( // zoom ảnh
-                        child: Image.network(
+                        child: Image.network( // ảnh thông qua url 
                           post.photos.first.photo,
                           fit: BoxFit.contain,
                         ),
@@ -256,9 +256,9 @@ class _PostItemState extends State<PostItem> {
   void _showPostActions(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      builder: (_) => SafeArea(
+      builder: (_) => SafeArea( // nằm an toàn 
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize: MainAxisSize.min, // nầm trong column vừa đủ
           children: [
             ListTile(
               leading: const Icon(Icons.delete, color: Colors.red),
@@ -279,7 +279,7 @@ class _PostItemState extends State<PostItem> {
 
   Future<void> _deletePost(BuildContext context) async {
     try {
-      await widget._postController.delPost(post.id!);
+      await widget._postController.delPost(post.id!); // xóa ngay ra khỏi widget 
       widget.onDelete?.call(); // gọi lại xóa post khỏi list trong thằng feed cha và load lại, nếu không null sẽ chạy, null thì k chạy.// Logic là ấn xóa, gọi api xóa, gọi ondelete.call() tới th cha, th cha lấy id post và xóa ui 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Đã xóa bài viết')),
@@ -291,9 +291,7 @@ class _PostItemState extends State<PostItem> {
     }
   }
 
-  /// ===============================================================
-  /// GỌI API REACT – UPDATE REALTIME
-  /// ===============================================================
+  /// GỌI API REACT 
   Future<void> _react(BuildContext context, String type) async { // hàm bát đồng bộ, build context để show snackbar 
     try {
       final reactionCounts =
@@ -308,7 +306,8 @@ class _PostItemState extends State<PostItem> {
         /// toggle trạng thái user
         if (post.userIsReaction == type) { // nếu có user thả react thì gán k thì thôi
           post.userIsReaction = null;
-        } else {
+        } 
+        else {
           post.userIsReaction = type;
         }
       });
@@ -319,9 +318,7 @@ class _PostItemState extends State<PostItem> {
     }
   }
 
-  /// ===============================================================
   /// ACTION BUTTON (LIKE / LOVE / COMMENT)
-  /// ===============================================================
   Widget _actionButton({ // hàm build button để dùng chug
     required IconData icon, // yêu cầu icon truyền vào
     required String label, // ycau label
@@ -335,11 +332,11 @@ class _PostItemState extends State<PostItem> {
       borderRadius: BorderRadius.circular(6),
       onTap: onTap, // bắt sự kiện ontap
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6), // trên dưới 6, phải trái 8 
         child: Row(
           children: [
             Icon(icon, size: 20, color: color),
-            const SizedBox(width: 4),
+            const SizedBox(width: 4), // khoảng cách
             Text(
               label,
               style: TextStyle(color: color),

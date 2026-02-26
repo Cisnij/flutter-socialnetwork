@@ -107,7 +107,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
             onRefresh: _fetchData, // kéo tải lại lời mời kb 
             child: _listRequests.isEmpty 
                 ? ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
+                    physics: const AlwaysScrollableScrollPhysics(), // vẫn cuộn được dù nội dung ít hay nhiều hơn màn hình
                     children: const [
                       SizedBox(
                         height: 300, 
@@ -116,8 +116,8 @@ class _RequestsScreenState extends State<RequestsScreen> {
                     ],
                   )
                 : ListView.builder(
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(vertical: 10), // margin trên dưới 10px, horizontal là trái phải 
+                    physics: const AlwaysScrollableScrollPhysics(), // luôn có thể scroll 
                     itemCount: _listRequests.length,
                     itemBuilder: (context, i) {
                       final request = _listRequests[i];
@@ -125,7 +125,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
 
                       return ListTile(
                         key: ValueKey('request_${request['id']}'), 
-                        leading: GestureDetector(
+                        leading: GestureDetector( // theo dõi sự kiện tap 
                           onTap: () {
                             Navigator.push(
                               context,
@@ -137,8 +137,8 @@ class _RequestsScreenState extends State<RequestsScreen> {
                           child: CircleAvatar(
                             radius: 25,
                             backgroundImage: sender['picture'] != null
-                                ? NetworkImage(sender['picture'])
-                                : null,
+                                ? NetworkImage(sender['picture']) // lấy ảnh từ url 
+                                : null, 
                             child: sender['picture'] == null 
                                 ? const Icon(Icons.person) 
                                 : null,
@@ -150,16 +150,17 @@ class _RequestsScreenState extends State<RequestsScreen> {
                         ),
                         subtitle: Text('Gửi lúc: ${_formatDate(request['created'])}'),
                         
-                        // Sửa phần trailing để chứa 2 nút
+                        // phần trailing là phần nút trong tile , có thêm row chứa thêm 2 nút là 1 là đồng ý 2 là hủy 
                         trailing: Row(
-                          mainAxisSize: MainAxisSize.min, // Quan trọng để không chiếm hết chiều ngang
+                          mainAxisSize: MainAxisSize.min, // co lại vừa đủ trong row 
                           children: [
+
                             // NÚT CHẤP NHẬN
                             ElevatedButton(
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.blue,
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                padding: const EdgeInsets.symmetric(horizontal: 12), // khoảng trống trái phải 
                               ),
                               onPressed: () => _handleAccept(request['id']),
                               child: const Text('Accept'),
@@ -170,10 +171,11 @@ class _RequestsScreenState extends State<RequestsScreen> {
                               style: OutlinedButton.styleFrom(
                                 side: const BorderSide(color: Colors.grey),
                                 foregroundColor: Colors.black87,
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                padding: const EdgeInsets.symmetric(horizontal: 12), // khoang trốn trái phải
                               ),
                               onPressed: () => _handleCancel(request['id']),
                               child: const Text('Cancel'),
+
                             ),
                           ],
                         ),

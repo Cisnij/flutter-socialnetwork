@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:my_app/Services/AuthService.dart';
 import 'package:my_app/Services/LoginService.dart';
 import 'package:my_app/Models/LoginModel.dart';
 import 'package:my_app/Services/TokenStorage.dart';
 import "package:my_app/Views/Screens/feed.dart";
 import 'package:my_app/Views/Screens/home.dart';
 import 'package:my_app/Services/FirebaseService.dart';
+import 'package:my_app/Services/UserService.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 class LoginController {
 
@@ -52,8 +54,17 @@ class LoginController {
 
         // await FirebaseService.init(); // khởi tạo firebase
         // String? token = await FirebaseMessaging.instance.getToken();
+        
         await TokenStorage.saveId(id: data['user']['pk'].toString());
         await TokenStorage.saveUsername(username: data['user']['username']);
+
+        final _userService = UserService(); //gọi lưu profile id
+        final profileRes = await _userService.userInformation();
+        if (profileRes.statusCode == 200 || profileRes.statusCode == 201) {
+          final profileData = jsonDecode(profileRes.body);
+          final profile = profileData[0];
+          await TokenStorage.saveProfileId(id: profile['id'].toString());
+        }
         isLoading=false;
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => MainScreen()));
       } 
@@ -62,9 +73,10 @@ class LoginController {
         final msg = parseErrorMessage(data);
         _showSnackBar(context, msg);
       }
-    } catch (e) {
-      _showSnackBar(context, "Lỗi kết nối");
-    }
+      } catch (e) {
+        debugPrint('=== ERROR: $e ==='); // ← thêm
+        _showSnackBar(context, e.toString()); // ← hiện lỗi thật thay vì "Lỗi kết nối"
+      }
   }
 
   void _showSnackBar(BuildContext context, String msg) {

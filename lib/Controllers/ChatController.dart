@@ -1,18 +1,18 @@
 // Controllers/ChatController.dart
 import 'dart:async';
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:flutter/material.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:my_app/Services/AuthService.dart';
 import 'package:my_app/Services/TokenStorage.dart';
 
-// ===== MODEL =====
+// ========== MESSAGE MODEL ==========
 class MessageModel {
   final int id;
-  final String content;    // REST API trả về 'content'
+  final String content;
   final String messageType;
   final String createdAt;
-  final Map<String, dynamic>? sender; // ProfileSerializer nested
+  final Map<String, dynamic>? sender;
 
   MessageModel({
     required this.id,
@@ -22,17 +22,14 @@ class MessageModel {
     this.sender,
   });
 
-  // lấy username để phân biệt bubble trái/phải
-  String get senderUsername => sender?['id']?.toString() ?? '';
+  String get senderUserId => sender?['user']?.toString() ?? '';
 
-  // lấy tên hiển thị trong bubble
   String get senderName {
     final first = sender?['first_name'] ?? '';
     final last = sender?['last_name'] ?? '';
-    return '$first $last'.trim().isEmpty ? senderUsername : '$first $last'.trim();
+    return '$first $last'.trim().isEmpty ? 'User' : '$first $last'.trim();
   }
 
-  // parse từ REST API (MessageSerializer trả về 'content')
   factory MessageModel.fromJson(Map<String, dynamic> json) {
     return MessageModel(
       id: json['id'],
@@ -43,30 +40,98 @@ class MessageModel {
     );
   }
 
-  // parse từ WebSocket (consumer trả về 'message' thay vì 'content')
   factory MessageModel.fromWebSocket(Map<String, dynamic> json) {
+    final rawSenderId = json['sender_id'];
+    final senderId = rawSenderId is int
+        ? rawSenderId
+        : int.tryParse(rawSenderId?.toString() ?? '');
     return MessageModel(
-      id: json['id'],
+      id: json['id'] is int ? json['id'] : int.parse(json['id'].toString()),
       content: json['message'] ?? '',
       messageType: json['message_type'] ?? 'text',
-      createdAt: json['created_at'] ?? '',
-      sender: {'user': {'username': json['sender']}}, // WebSocket chỉ trả về username string
+      createdAt: json['created_at'] ?? DateTime.now().toIso8601String(),
+      sender: {
+        'user': senderId,
+        'first_name': json['sender'],
+        'last_name': '',
+      },
     );
   }
 }
 
-// ===== WEBSOCKET SERVICE =====
+// ========== CONVERSATION MODEL ==========
+class ConversationModel {
+  final int id;
+  final bool isGroup;
+  final String createdAt;
+  final List<Map<String, dynamic>> members;
+  final Map<String, dynamic>? lastMessage;
+
+  ConversationModel({
+    required this.id,
+    required this.isGroup,
+    required this.createdAt,
+    required this.members,
+    this.lastMessage,
+  });
+
+  String getTitle(String myProfileId) {
+    if (isGroup) return 'Nhóm chat';
+    for (final m in members) {
+      final profileId = m['user']?['id']?.toString();
+      if (profileId != null && profileId != myProfileId) {
+        final first = m['user']?['first_name'] ?? '';
+        final last = m['user']?['last_name'] ?? '';
+        final name = '$first $last'.trim();
+        return name.isEmpty ? 'User $profileId' : name;
+      }
+    }
+    return 'Conversation $id';
+  }
+
+  String? getOtherPicture(String myProfileId) {
+    for (final m in members) {
+      final profileId = m['user']?['id']?.toString();
+      if (profileId != null && profileId != myProfileId) return m['user']?['picture'];
+    }
+    return null;
+  }
+
+  int? getOtherProfileId(String myProfileId) {
+    for (final m in members) {
+      final profileId = m['user']?['id'];
+      if (profileId != null && profileId.toString() != myProfileId) {
+        return profileId is int ? profileId : int.tryParse(profileId.toString());
+      }
+    }
+    return null;
+  }
+
+  String get lastContent => lastMessage?['content'] ?? '';
+  String get lastTime => lastMessage?['created_at'] ?? '';
+
+  factory ConversationModel.fromJson(Map<String, dynamic> json) {
+    return ConversationModel(
+      id: json['id'],
+      isGroup: json['is_group'] ?? false,
+      createdAt: json['created_at'] ?? '',
+      members: List<Map<String, dynamic>>.from(json['members'] ?? []),
+      lastMessage: json['last_message'],
+    );
+  }
+}
+
+// ========== WEBSOCKET SERVICE ==========
 class _ChatService {
   WebSocketChannel? _channel;
-  final _messageController = StreamController<MessageModel>.broadcast(); // broadcast để nhiều widget lắng nghe
-  final _errorController = StreamController<String>.broadcast(); // lỗi từ server (block, pending...)
+  final _messageController = StreamController<MessageModel>.broadcast();
+  final _errorController = StreamController<String>.broadcast();
 
   Stream<MessageModel> get messages => _messageController.stream;
   Stream<String> get errors => _errorController.stream;
 
   Future<void> connect(int conversationId) async {
     final token = await TokenStorage.getAccessToken();
-    // token qua query param vì WebSocket không có Authorization header
     final uri = Uri.parse('ws://localhost:8000/ws/chat/$conversationId/?token=$token');
     _channel = WebSocketChannel.connect(uri);
 
@@ -75,73 +140,87 @@ class _ChatService {
         try {
           final decoded = jsonDecode(data) as Map<String, dynamic>;
           if (decoded.containsKey('error')) {
-            _errorController.add(decoded['error']); // server báo lỗi → hiện snackbar
+            _errorController.add(decoded['error']);
             return;
           }
-          _messageController.add(MessageModel.fromWebSocket(decoded)); // tin nhắn bình thường
+          _messageController.add(MessageModel.fromWebSocket(decoded));
         } catch (e) {
-          print('WebSocket parse error: $e');
+          debugPrint('WebSocket parse error: $e');
         }
       },
       onError: (e) => _errorController.add('Mất kết nối'),
-      onDone: () => print('WebSocket closed'),
     );
   }
 
   void sendMessage(String message) {
-    _channel?.sink.add(jsonEncode({'message': message})); // gửi lên server, consumer.receive() nhận
+    _channel?.sink.add(jsonEncode({'message': message}));
   }
 
   void disconnect() {
     _channel?.sink.close();
-    _messageController.close();
-    _errorController.close();
   }
 }
 
-// ===== CONTROLLER =====
+// ========== CHAT CONTROLLER ==========
 class ChatController {
   static const String _base = 'http://localhost:8000';
-
-  // WebSocket service dùng nội bộ, ChatScreen lấy qua getter
   final _chatService = _ChatService();
+
   Stream<MessageModel> get messages => _chatService.messages;
   Stream<String> get errors => _chatService.errors;
 
-  // bắt đầu hoặc lấy conversation với người bạn, truyền vào profile_id
-  // StartConversationAPIView: get_object_or_404(Profile, id=user_id)
-  Future<int> startConversation(int profileId) async {
-    final res = await authFetch(
-      url: '$_base/api/chat/start/$profileId/',
-      body: {},
-    );
-    if (res.statusCode == 200 || res.statusCode == 201) {
-      return jsonDecode(res.body)['id']; // trả về conversation_id để mở ChatScreen
-    }
-    throw Exception('Không thể bắt đầu cuộc trò chuyện');
-  }
-
-  // lấy lịch sử tin nhắn - ConversationMessage view
-  Future<List<MessageModel>> getMessages(int conversationId) async {
-    final res = await authGet(url: '$_base/api/chat/messages/list/$conversationId/');
+  Future<List<ConversationModel>> getConversations() async {
+    final res = await authGet(url: '$_base/api/chat/conversations/');
     if (res.statusCode == 200) {
       final data = jsonDecode(res.body);
-      final list = data is List ? data : (data['results'] ?? []); // handle pagination
-      return (list as List).map((e) => MessageModel.fromJson(e)).toList();
+      final list = data is List ? data : (data['results'] ?? []);
+      return (list as List).map((e) => ConversationModel.fromJson(e)).toList();
     }
-    throw Exception('Lỗi tải tin nhắn');
+    throw Exception('Lỗi tải danh sách chat');
   }
 
-  // kết nối WebSocket
+  Future<int> startConversation(int profileId) async {
+    final res = await authFetch(url: '$_base/api/chat/start/$profileId/', body: {});
+    if (res.statusCode == 200 || res.statusCode == 201) return jsonDecode(res.body)['id'];
+    throw Exception('Không thể bắt đầu chat');
+  }
+
+  // API sort mới nhất trước (-created_at):
+  //   trang 1 = tin mới nhất, next = trang cũ hơn
+  //
+  // Load trang 1, results đang mới→cũ → reverse thành cũ→mới để hiển thị đúng
+  // nextUrl = next = trang cũ hơn, dùng khi kéo lên
+  Future<(List<MessageModel>, String?)> getFirstPage(int conversationId) async {
+    final res = await authGet(url: '$_base/api/chat/messages/list/$conversationId/');
+    if (res.statusCode != 200) throw Exception('Lỗi tải tin nhắn');
+    final data = jsonDecode(res.body);
+
+    if (data is List) {
+      final msgs = (data as List).map((e) => MessageModel.fromJson(e)).toList();
+      return (msgs.reversed.toList(), null);
+    }
+
+    final results = data['results'] as List;
+    // results: mới→cũ → reversed: cũ→mới
+    final msgs = results.map((e) => MessageModel.fromJson(e)).toList().reversed.toList();
+    return (msgs, data['next'] as String?);
+  }
+
+  // Kéo lên → load trang cũ hơn (next của trang hiện tại)
+  // results đang mới→cũ → reverse thành cũ→mới → insertAll(0, ...) vào đầu list
+  Future<(List<MessageModel>, String?)> getOlderPage(String url) async {
+    final res = await authGet(url: url);
+    if (res.statusCode != 200) throw Exception('Lỗi tải tin nhắn');
+    final data = jsonDecode(res.body);
+    final results = data['results'] as List;
+    final msgs = results.map((e) => MessageModel.fromJson(e)).toList().reversed.toList();
+    return (msgs, data['next'] as String?);
+  }
+
   Future<void> connect(int conversationId) => _chatService.connect(conversationId);
-
-  // gửi tin nhắn qua WebSocket
   void sendMessage(String message) => _chatService.sendMessage(message);
-
-  // ngắt WebSocket khi thoát màn hình
   void disconnect() => _chatService.disconnect();
 
-  // đánh dấu đã xem khi mở màn hình
   Future<void> seenMessage(int conversationId) async {
     await authFetch(url: '$_base/api/chat/messages/seen/$conversationId/', body: {});
   }

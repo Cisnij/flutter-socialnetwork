@@ -42,6 +42,11 @@ class TokenStorage {
     await _storage.write(key: 'username', value: username);
   }
   static Future<String?> getUsername() => _storage.read(key: 'username');
+  
+  static Future<void> saveProfileId({required String id}) async {
+    await _storage.write(key: 'profileId', value: id);
+  }
+  static Future<String?> getProfileId() => _storage.read(key: 'profileId');
 }
 
 //cách dùng TokenStorage.getAccessToken hay TokenStorage.saveTokens 

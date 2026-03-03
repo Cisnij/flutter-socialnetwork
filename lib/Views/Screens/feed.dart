@@ -213,16 +213,16 @@ class _FeedScreenState extends State<FeedScreen> {
                     final noti = _notis[index];
                     return ListTile(
                       leading: Icon(
-                        noti.verb == 'reacted' // nếu verb là react thì icon là trái tim 
+                        noti.type == 'reacted' // nếu verb là react thì icon là trái tim 
                             ? Icons.favorite
                             : Icons.add,
-                        color: noti.verb == 'reacted' // màu là đỏ nếu là react
+                        color: noti.type == 'reacted' // màu là đỏ nếu là react
                             ? Colors.red
                             : Colors.blue,
                       ),
                       title: Text(noti.displayText),
                       subtitle: Text(
-                        _formatDate(noti.created_at ?? ''), // hiển thị thgian 
+                        _formatDate(noti.createdAt ?? ''), // hiển thị thgian 
                         style: const TextStyle(fontSize: 12),
                       ),
                       onTap: () {

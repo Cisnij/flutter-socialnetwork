@@ -50,39 +50,40 @@ class CommentModel {
     );
   }
 }
-class InAppNotification{
+class InAppNotification {
   int? id;
   String? actor;
-  String? verb;
-  int? post_id;
-  String? created_at;
+  String? type;       // đổi từ verb -> type
+  int? objectId;      // đổi từ post_id -> objectId
+  String? createdAt;  // camelCase cho chuẩn Dart
 
   InAppNotification({
     this.id,
     this.actor,
-    this.verb,
-    this.post_id,
-    this.created_at,
+    this.type,
+    this.objectId,
+    this.createdAt,
   });
-  
+
   factory InAppNotification.fromJson(Map<String, dynamic> json) {
     return InAppNotification(
       id: json['id'],
       actor: json['actor'],
-      verb: json['verb'],
-      post_id: json['post_id'],
-      created_at: json['created_at'],
+      type: json['type'],              // ✅ sửa ở đây
+      objectId: json['object_id'],     // ✅ sửa ở đây
+      createdAt: json['created_at'],
     );
   }
+
   String get displayText {
-    switch (verb) {
-      case 'reacted':
+    switch (type) {   // ✅ dùng type thay vì verb
+      case 'reaction':
         return '$actor đã react bài viết của bạn';
-      case 'commented':
+      case 'comment':
         return '$actor đã bình luận bài viết của bạn';
-      case 'requested':
+      case 'friend_request':
         return '$actor đã gửi lời mời kết bạn';
-      case 'followed':
+      case 'follow':
         return '$actor đã theo dõi bạn';
       default:
         return '$actor có hoạt động mới';

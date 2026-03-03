@@ -7,7 +7,7 @@ import 'package:my_app/Services/AuthService.dart';
 import 'package:my_app/Services/TokenStorage.dart';
 
 // ========== MESSAGE MODEL ==========
-class MessageModel {
+class MessageModel { // model để parse tin nhắn nhận từ ws và mess history    
   final int id;
   final String content;
   final String messageType;
@@ -22,7 +22,7 @@ class MessageModel {
     this.sender,
   });
 
-  String get senderUserId => sender?['user']?.toString() ?? '';
+  String get senderUserId => sender?['user']?.toString() ?? '';// lấy ra id
 
   String get senderName {
     final first = sender?['first_name'] ?? '';
@@ -30,7 +30,7 @@ class MessageModel {
     return '$first $last'.trim().isEmpty ? 'User' : '$first $last'.trim();
   }
 
-  factory MessageModel.fromJson(Map<String, dynamic> json) {
+  factory MessageModel.fromJson(Map<String, dynamic> json) { // chuyển từ json về(lấy các message trong đoạn chat)
     return MessageModel(
       id: json['id'],
       content: json['content'] ?? '',
@@ -40,7 +40,7 @@ class MessageModel {
     );
   }
 
-  factory MessageModel.fromWebSocket(Map<String, dynamic> json) {
+  factory MessageModel.fromWebSocket(Map<String, dynamic> json) { // chuyển json từ websocket
     final rawSenderId = json['sender_id'];
     final senderId = rawSenderId is int
         ? rawSenderId
@@ -75,29 +75,29 @@ class ConversationModel {
     this.lastMessage,
   });
 
-  String getTitle(String myProfileId) {
+  String getTitle(String myProfileId) { // nếu là group thì return nhóm chat k thì return tên đối phương 
     if (isGroup) return 'Nhóm chat';
     for (final m in members) {
-      final profileId = m['user']?['id']?.toString();
+      final profileId = m['user']?['id']?.toString(); //lấy id 
       if (profileId != null && profileId != myProfileId) {
         final first = m['user']?['first_name'] ?? '';
         final last = m['user']?['last_name'] ?? '';
         final name = '$first $last'.trim();
-        return name.isEmpty ? 'User $profileId' : name;
+        return name.isEmpty ? 'User $profileId' : name; // kh phải mình thì láy tên ng còn lại
       }
     }
     return 'Conversation $id';
   }
 
-  String? getOtherPicture(String myProfileId) {
+  String? getOtherPicture(String myProfileId) { // lấy ảnh user đang chat 
     for (final m in members) {
-      final profileId = m['user']?['id']?.toString();
-      if (profileId != null && profileId != myProfileId) return m['user']?['picture'];
+      final profileId = m['user']?['id']?.toString(); //lấy id
+      if (profileId != null && profileId != myProfileId) return m['user']?['picture']; // k phải mình thì cho lấy ảnh
     }
     return null;
   }
 
-  int? getOtherProfileId(String myProfileId) {
+  int? getOtherProfileId(String myProfileId) { //lấy id 
     for (final m in members) {
       final profileId = m['user']?['id'];
       if (profileId != null && profileId.toString() != myProfileId) {
@@ -107,10 +107,10 @@ class ConversationModel {
     return null;
   }
 
-  String get lastContent => lastMessage?['content'] ?? '';
-  String get lastTime => lastMessage?['created_at'] ?? '';
+  String get lastContent => lastMessage?['content'] ?? ''; //láy tin nhắn mới nhất 
+  String get lastTime => lastMessage?['created_at'] ?? ''; // lấy thgian tin đó đc tạo 
 
-  factory ConversationModel.fromJson(Map<String, dynamic> json) {
+  factory ConversationModel.fromJson(Map<String, dynamic> json) { // parse từ json sang 
     return ConversationModel(
       id: json['id'],
       isGroup: json['is_group'] ?? false,
@@ -123,27 +123,27 @@ class ConversationModel {
 
 // ========== WEBSOCKET SERVICE ==========
 class _ChatService {
-  WebSocketChannel? _channel;
-  final _messageController = StreamController<MessageModel>.broadcast();
-  final _errorController = StreamController<String>.broadcast();
+  WebSocketChannel? _channel; // biến kết nối ws giúp kết nối backend, lưu tin nhắn và gửi tin nhắn
+  final _messageController = StreamController<MessageModel>.broadcast(); // cho phép nhiều nơi cùng lắng nghe  và cập nhật UI realtime
+  final _errorController = StreamController<String>.broadcast(); // tạo 1 string phát lỗi 
 
-  Stream<MessageModel> get messages => _messageController.stream;
+  Stream<MessageModel> get messages => _messageController.stream; // chỉ cho phép nghe 
   Stream<String> get errors => _errorController.stream;
 
-  Future<void> connect(int conversationId) async {
+  Future<void> connect(int conversationId) async { // hàm gọi connect
     final token = await TokenStorage.getAccessToken();
-    final uri = Uri.parse('ws://localhost:8000/ws/chat/$conversationId/?token=$token');
-    _channel = WebSocketChannel.connect(uri);
+    final uri = Uri.parse('ws://localhost:8000/ws/chat/$conversationId/?token=$token');//gọi api truyền access token vào 
+    _channel = WebSocketChannel.connect(uri);// kết nối url này 
 
-    _channel!.stream.listen(
+    _channel!.stream.listen( // lắng nghe nếu có data gửi đến 
       (data) {
         try {
-          final decoded = jsonDecode(data) as Map<String, dynamic>;
+          final decoded = jsonDecode(data) as Map<String, dynamic>; // có data thì giải mã chuyển thành map 
           if (decoded.containsKey('error')) {
             _errorController.add(decoded['error']);
             return;
           }
-          _messageController.add(MessageModel.fromWebSocket(decoded));
+          _messageController.add(MessageModel.fromWebSocket(decoded)); // chuyển data từ ws thành thường và đẩy vào build ra UI
         } catch (e) {
           debugPrint('WebSocket parse error: $e');
         }
@@ -153,11 +153,11 @@ class _ChatService {
   }
 
   void sendMessage(String message) {
-    _channel?.sink.add(jsonEncode({'message': message}));
+    _channel?.sink.add(jsonEncode({'message': message})); // gửi data dạng json và build ra UI
   }
 
   void disconnect() {
-    _channel?.sink.close();
+    _channel?.sink.close(); // đóng kết nối 
   }
 }
 
@@ -179,49 +179,41 @@ class ChatController {
     throw Exception('Lỗi tải danh sách chat');
   }
 
-  Future<int> startConversation(int profileId) async {
+  Future<int> startConversation(int profileId) async { //gọi api bắt đầu đoạn chat 
     final res = await authFetch(url: '$_base/api/chat/start/$profileId/', body: {});
     if (res.statusCode == 200 || res.statusCode == 201) return jsonDecode(res.body)['id'];
     throw Exception('Không thể bắt đầu chat');
   }
 
-  // API sort mới nhất trước (-created_at):
-  //   trang 1 = tin mới nhất, next = trang cũ hơn
-  //
-  // Load trang 1, results đang mới→cũ → reverse thành cũ→mới để hiển thị đúng
-  // nextUrl = next = trang cũ hơn, dùng khi kéo lên
-  Future<(List<MessageModel>, String?)> getFirstPage(int conversationId) async {
+  Future<(List<MessageModel>, String?)> getFirstPage(int conversationId) async { // gọi api và phân trang
     final res = await authGet(url: '$_base/api/chat/messages/list/$conversationId/');
     if (res.statusCode != 200) throw Exception('Lỗi tải tin nhắn');
     final data = jsonDecode(res.body);
 
     if (data is List) {
-      final msgs = (data as List).map((e) => MessageModel.fromJson(e)).toList();
-      return (msgs.reversed.toList(), null);
+      final msgs = (data as List).map((e) => MessageModel.fromJson(e)).toList(); // chuyển tin nhắn thành bth và đưa vàolist
+      return (msgs.reversed.toList(), null); // đảo ngc list
     }
 
     final results = data['results'] as List;
-    // results: mới→cũ → reversed: cũ→mới
     final msgs = results.map((e) => MessageModel.fromJson(e)).toList().reversed.toList();
     return (msgs, data['next'] as String?);
   }
 
-  // Kéo lên → load trang cũ hơn (next của trang hiện tại)
-  // results đang mới→cũ → reverse thành cũ→mới → insertAll(0, ...) vào đầu list
   Future<(List<MessageModel>, String?)> getOlderPage(String url) async {
     final res = await authGet(url: url);
     if (res.statusCode != 200) throw Exception('Lỗi tải tin nhắn');
     final data = jsonDecode(res.body);
     final results = data['results'] as List;
     final msgs = results.map((e) => MessageModel.fromJson(e)).toList().reversed.toList();
-    return (msgs, data['next'] as String?);
+    return (msgs, data['next'] as String?); // gọi trang next
   }
 
   Future<void> connect(int conversationId) => _chatService.connect(conversationId);
   void sendMessage(String message) => _chatService.sendMessage(message);
   void disconnect() => _chatService.disconnect();
 
-  Future<void> seenMessage(int conversationId) async {
+  Future<void> seenMessage(int conversationId) async { // gọi api seen message
     await authFetch(url: '$_base/api/chat/messages/seen/$conversationId/', body: {});
   }
 }

@@ -69,14 +69,14 @@ class InAppNotification {
     return InAppNotification(
       id: json['id'],
       actor: json['actor'],
-      type: json['type'],              // ✅ sửa ở đây
-      objectId: json['object_id'],     // ✅ sửa ở đây
+      type: json['type'],             
+      objectId: json['object_id'],    
       createdAt: json['created_at'],
     );
   }
 
   String get displayText {
-    switch (type) {   // ✅ dùng type thay vì verb
+    switch (type) {   
       case 'reaction':
         return '$actor đã react bài viết của bạn';
       case 'comment':

@@ -52,8 +52,8 @@ class LoginController {
           refresh: data['refresh'],
         );
 
-        // await FirebaseService.init(); // khởi tạo firebase
-        // String? token = await FirebaseMessaging.instance.getToken();
+        await FirebaseService.init(); // khởi tạo firebase
+        String? token = await FirebaseMessaging.instance.getToken();
         
         await TokenStorage.saveId(id: data['user']['pk'].toString());
         await TokenStorage.saveUsername(username: data['user']['username']);
@@ -61,11 +61,12 @@ class LoginController {
         final _userService = UserService(); //gọi lưu profile id
         final profileRes = await _userService.userInformation();
         if (profileRes.statusCode == 200 || profileRes.statusCode == 201) {
-          final profileData = jsonDecode(profileRes.body);
-          final profile = profileData[0];
-          await TokenStorage.saveProfileId(id: profile['id'].toString());
+          final profileData = jsonDecode(profileRes.body) as Map<String, dynamic>;
+          await TokenStorage.saveProfileId(id: profileData['id'].toString()); 
         }
         isLoading=false;
+        debugPrint('Profile status: ${profileRes.statusCode}');
+        debugPrint('Profile body: ${profileRes.body}'); // ← quan trọng
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => MainScreen()));
       } 
       else {
@@ -81,5 +82,27 @@ class LoginController {
 
   void _showSnackBar(BuildContext context, String msg) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+}
+
+
+class ResetPassController {
+  final LoginService _service = LoginService();
+
+  Future<Map<String, dynamic>> handleResetPassword(String email) async {
+    try {
+      final model = ResetPassModel(email: email);
+      final response = await _service.resetPass(model.toJson());
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': 'Email đặt lại mật khẩu đã được gửi!'};
+      } else {
+        final error = jsonDecode(response.body);
+        final message = error['email']?[0] ?? error['detail'] ?? 'Đã có lỗi xảy ra.';
+        return {'success': false, 'message': message};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối. Vui lòng thử lại.'};
+    }
   }
 }

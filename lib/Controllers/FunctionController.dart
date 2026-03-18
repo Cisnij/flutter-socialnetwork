@@ -9,7 +9,6 @@ class FunctionController {
     final model = ReactModel(type: type);
 
     final res = await _service.react(postId, model.toJson());
-
     if (res.statusCode == 200 || res.statusCode == 201) {
       final Map<String, dynamic> data = jsonDecode(res.body); // chuyển data sau decode thành map
       final List list = data['count']; // 👈 lấy mảng count

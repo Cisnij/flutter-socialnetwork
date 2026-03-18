@@ -9,7 +9,7 @@ Future<String?> refreshAccessToken() async { // hàm lấy access token mới
   if (refreshToken == null) return null; //check
 
   final url = Uri.parse( // gọi url refresh
-    'http://localhost:8000/api/auth/token/refresh/',
+    'http://10.27.1.95:8000/api/auth/token/refresh/',
   );
 
   final response = await http.post(

@@ -7,4 +7,13 @@ class LoginModel{
     'email':username,
     'password':password,
   };
+  
+}
+class ResetPassModel{
+  final String email;
+  ResetPassModel({required this.email}); 
+
+  Map<String, dynamic> toJson()=>{ // hàm custome chuyển thành json
+    'email': email
+  };
 }

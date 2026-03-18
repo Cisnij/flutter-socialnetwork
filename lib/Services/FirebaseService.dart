@@ -9,7 +9,7 @@ import 'package:my_app/Services/TokenStorage.dart';
 class FirebaseService {
   static final FirebaseMessaging _fcm = FirebaseMessaging.instance; // gọi instance của package 
 
-  static const String _baseUrl = "http://localhost:8000/";
+  static const String _baseUrl = "http://10.27.1.95:8000";
 
  // HÀM KHỞI TẠO LẦN ĐẦU VÀ NẾU FIREBASE CÓ ĐỔI TOKEN THÌ ĐỔI THEO
   static Future<void> init() async {

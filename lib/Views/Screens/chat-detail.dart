@@ -32,7 +32,7 @@ class _ChatTabScreenState extends State<ChatTabScreen> {
 
   Future<void> _init() async {
     _myProfileId = await TokenStorage.getProfileId();
-    await Future.wait([_loadFriends(), _loadConversations()]);
+    await Future.wait([_loadFriends(), _loadConversations()]); //đợi hàm chạy hết
   }
 
   Future<void> _loadFriends() async {
@@ -59,12 +59,32 @@ class _ChatTabScreenState extends State<ChatTabScreen> {
     try {
       final convId = await _chatController.startConversation(profileId);
       if (!mounted) return;
+
+      // ✅ set unread = 0 ngay lập tức trên UI trước khi push, không cần đợi server
+      setState(() {
+        final idx = _conversations.indexWhere((c) => c.id == convId);
+        if (idx != -1) {
+          _conversations[idx] = ConversationModel(
+            id: _conversations[idx].id,
+            isGroup: _conversations[idx].isGroup,
+            createdAt: _conversations[idx].createdAt,
+            members: _conversations[idx].members,
+            lastMessage: _conversations[idx].lastMessage,
+            unreadCount: 0, // ✅ set về 0 ngay lập tức
+          );
+        }
+      });
+
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => ChatScreen(conversationId: convId, title: title, avatarUrl: picture),
         ),
-      ).then((_) => _loadConversations());
+      ).then((_) async {
+        // reload lại để đồng bộ với server sau khi pop về
+        await Future.delayed(const Duration(milliseconds: 500)); // delay để backend ghi seen xong
+        _loadConversations();
+      });
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -95,7 +115,7 @@ class _ChatTabScreenState extends State<ChatTabScreen> {
         title: const Text('Tin nhắn',
             style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 22)),
         actions: [
-          IconButton(icon: const Icon(Icons.edit_outlined, color: Colors.black), onPressed: () {}),
+          // IconButton(icon: const Icon(Icons.edit_outlined, color: Colors.black), onPressed: () {}),
         ],
       ),
       body: RefreshIndicator(
@@ -187,6 +207,7 @@ class _ChatTabScreenState extends State<ChatTabScreen> {
                             final conv = _conversations[i];
                             final title = conv.getTitle(_myProfileId ?? '');
                             final picture = conv.getOtherPicture(_myProfileId ?? '');
+                            final unread = conv.unreadCount;
                             return InkWell(
                               onTap: () => _openChat(
                                 conv.getOtherProfileId(_myProfileId ?? '') ?? conv.id,
@@ -210,19 +231,62 @@ class _ChatTabScreenState extends State<ChatTabScreen> {
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                                          Text(
+                                            title,
+                                            style: TextStyle(
+                                              fontWeight: unread > 0
+                                                  ? FontWeight.bold
+                                                  : FontWeight.w600,
+                                              fontSize: 15,
+                                            ),
+                                          ),
                                           const SizedBox(height: 2),
                                           Text(
                                             conv.lastContent.isEmpty ? 'Bắt đầu cuộc trò chuyện' : conv.lastContent,
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color: unread > 0
+                                                  ? Colors.black87
+                                                  : Colors.grey.shade600,
+                                              fontWeight: unread > 0
+                                                  ? FontWeight.w600
+                                                  : FontWeight.normal,
+                                            ),
                                           ),
                                         ],
                                       ),
                                     ),
-                                    Text(_formatTime(conv.lastTime),
-                                        style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      children: [
+                                        Text(
+                                          _formatTime(conv.lastTime),
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: unread > 0 ? Colors.blue : Colors.grey.shade500,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        if (unread > 0)
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: const BoxDecoration(
+                                              color: Colors.blue,
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: Text(
+                                              unread > 99 ? '99+' : '$unread',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    )
                                   ],
                                 ),
                               ),
@@ -295,13 +359,19 @@ class _ChatScreenState extends State<ChatScreen> {
         });
       }
 
+      // ✅ seen TRƯỚC khi connect WebSocket, có await để đảm bảo backend ghi xong
+      await _controller.seenMessage(widget.conversationId);
+
       await _controller.connect(widget.conversationId);
-      _controller.seenMessage(widget.conversationId);
 
       // tin mới từ WebSocket → add vào cuối (dưới cùng)
       _msgSub = _controller.messages.listen((msg) {
         if (!mounted) return;
         setState(() => _messages.add(msg));
+
+        // ✅ seen lại mỗi khi nhận tin mới qua WebSocket để unread luôn = 0 khi đang trong chat
+        _controller.seenMessage(widget.conversationId);
+
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (_scrollController.hasClients) {
             _scrollController.animateTo(
@@ -380,7 +450,11 @@ class _ChatScreenState extends State<ChatScreen> {
         elevation: 0.5,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () async {
+            // ✅ gọi seen lần cuối trước khi pop để chắc chắn backend đã ghi xong
+            await _controller.seenMessage(widget.conversationId);
+            if (mounted) Navigator.pop(context);
+          },
         ),
         title: Row(
           children: [

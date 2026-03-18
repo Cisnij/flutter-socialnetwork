@@ -18,32 +18,42 @@ class PostController{
 
 
 
-Future<bool> delPost(int id) async { // sửa post
-  final res = await _service.delPost(id,);
+  Future<bool> delPost(int id) async { // sửa post
+    final res = await _service.delPost(id,);
 
-  if (res.statusCode == 200 || res.statusCode == 204) {
-    return true;
+    if (res.statusCode == 200 || res.statusCode == 204) {
+      return true;
+    }
+    return false;
   }
-  return false;
-}
 
 
   
-Future<List<PostModel>> getFeed() async {
-  final res = await _service.getFeedPost();
+  Future<List<PostModel>> getFeed() async {
+    final res = await _service.getFeedPost();
 
-  if (res.statusCode == 200) {
-    final Map<String, dynamic> data = jsonDecode(res.body);
+    if (res.statusCode == 200) {
+      final Map<String, dynamic> data = jsonDecode(res.body);
 
-    final List results = data['results']; 
+      final List results = data['results']; 
 
-    return results
-        .map((e) => PostModel.fromJson(e)) // lấy ra từng thằng con, biến nó thành dữ liệu thường và đưa vào list
-        .toList();
-  } else {
-    throw Exception('Lỗi xảy ra');
+      return results
+          .map((e) => PostModel.fromJson(e)) // lấy ra từng thằng con, biến nó thành dữ liệu thường và đưa vào list
+          .toList();
+    } else {
+      throw Exception('Lỗi xảy ra');
+    }
   }
-}
 
+  /// Gọi service sửa post, trả về PostModel mới sau khi cập nhật
+  Future<PostModel> editPost(int id, String title) async {
+    final res = await _service.editPost(id, title); // gọi service
 
+    if (res.statusCode == 200) {
+      final data = jsonDecode(res.body);
+      return PostModel.fromJson(data); // parse lại model mới từ response
+    } else {
+      throw Exception('Sửa post thất bại');
+    }
+  }
 }

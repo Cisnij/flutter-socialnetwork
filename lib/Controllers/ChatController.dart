@@ -66,6 +66,7 @@ class ConversationModel {
   final String createdAt;
   final List<Map<String, dynamic>> members;
   final Map<String, dynamic>? lastMessage;
+  final int unreadCount;
 
   ConversationModel({
     required this.id,
@@ -73,6 +74,7 @@ class ConversationModel {
     required this.createdAt,
     required this.members,
     this.lastMessage,
+    this.unreadCount = 0,
   });
 
   String getTitle(String myProfileId) { // nếu là group thì return nhóm chat k thì return tên đối phương 
@@ -117,6 +119,7 @@ class ConversationModel {
       createdAt: json['created_at'] ?? '',
       members: List<Map<String, dynamic>>.from(json['members'] ?? []),
       lastMessage: json['last_message'],
+      unreadCount: json['unread_count'] ?? 0,
     );
   }
 }
@@ -132,7 +135,7 @@ class _ChatService {
 
   Future<void> connect(int conversationId) async { // hàm gọi connect
     final token = await TokenStorage.getAccessToken();
-    final uri = Uri.parse('ws://localhost:8000/ws/chat/$conversationId/?token=$token');//gọi api truyền access token vào 
+    final uri = Uri.parse('ws://10.27.1.95:8000/ws/chat/$conversationId/?token=$token');//gọi api truyền access token vào 
     _channel = WebSocketChannel.connect(uri);// kết nối url này 
 
     _channel!.stream.listen( // lắng nghe nếu có data gửi đến 
@@ -148,7 +151,10 @@ class _ChatService {
           debugPrint('WebSocket parse error: $e');
         }
       },
-      onError: (e) => _errorController.add('Mất kết nối'),
+      onError: (e) {
+        debugPrint('=== WS error: $e ==='); // ← thêm
+        _errorController.add('Mất kết nối');
+      },
     );
   }
 
@@ -163,8 +169,8 @@ class _ChatService {
 
 // ========== CHAT CONTROLLER ==========
 class ChatController {
-  static const String _base = 'http://localhost:8000';
-  final _chatService = _ChatService();
+  static const String _base = 'http://10.27.1.95:8000';
+  final _chatService = _ChatService(); 
 
   Stream<MessageModel> get messages => _chatService.messages;
   Stream<String> get errors => _chatService.errors;

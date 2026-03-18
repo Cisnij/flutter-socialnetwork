@@ -3,7 +3,7 @@ import 'dart:convert';
 
 class RegisterService {
   Future<http.Response> sendRequest(Map<String, dynamic> jsonData) async {
-    final url = Uri.parse("http://localhost:8000/api/auth/registration/"); //url gui
+    final url = Uri.parse("http://10.27.1.95:8000/api/auth/registration/"); //url gui
     return await http.post(
       url,
       headers: {"Content-Type": "application/json"},

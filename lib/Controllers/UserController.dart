@@ -6,12 +6,12 @@ import 'package:my_app/Services/UserService.dart';
 class UserController {
   final UserService _service = UserService();
 
-  Future<UserModel> userInfo() async { //Future chứa đối tượng để return về chính đối tượng đó
+  Future<UserModel> userInfo() async {
     final res = await _service.userInformation();
 
     if (res.statusCode == 200) {
-      final List data = jsonDecode(res.body);
-      return UserModel.fromJson(data.first);
+      final data = jsonDecode(res.body) as Map<String, dynamic>; // ← đổi thành Map
+      return UserModel.fromJson(data);
     } else {
       throw Exception('Có lỗi khi lấy thông tin user');
     }

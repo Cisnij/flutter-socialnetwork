@@ -12,10 +12,10 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 void main() async{
   WidgetsFlutterBinding.ensureInitialized(); // đảm bảo flutter đã khởi tạo xong
 
-  // // await Firebase.initializeApp(); // hàm khởi tạo firebase
-  // FirebaseMessaging.onMessage.listen((RemoteMessage message) {// app đang mở → tự show bằng local notification hoặc snackbar
-  //   print("📩 Foreground message: ${message.notification?.title}");
-  // });
+  await Firebase.initializeApp(); // hàm khởi tạo firebase
+  FirebaseMessaging.onMessage.listen((RemoteMessage message) {// app đang mở → tự show bằng local notification hoặc snackbar
+    print("📩 Foreground message: ${message.notification?.title}");
+  });
 
 
   runApp(

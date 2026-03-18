@@ -46,6 +46,8 @@ class _PostItemState extends State<PostItem> {
       0,
       (sum, r) => sum + r.total, // lặp từ 0 và cộng vào tới hết
     );
+
+    // Hàm format thời gian đăng post thành dạng "x phút trước"
     String _formatDate(String? raw) {
       if (raw == null) return '';
       final dt = DateTime.tryParse(raw);
@@ -78,9 +80,8 @@ class _PostItemState extends State<PostItem> {
       return '$weeks tuần trước';
     }
 
-
     return Card( // dạng card cho post
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), // khoảng cách margin card , trên dưới 6, trái phải 12 
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), // khoảng cách margin card , trên dưới 6, trái phải 12
       elevation: 1.5, // đổ bóng
       shape: RoundedRectangleBorder( // bo góc card
         borderRadius: BorderRadius.circular(12),
@@ -140,14 +141,15 @@ class _PostItemState extends State<PostItem> {
                   ),
                 ),
 
-               /// ---------- MORE ICON ----------          
-                if(AppSession.instance.isMe(post.user?.id))                                      
-                IconButton(
-                  icon: Icon(Icons.more_horiz), //icon 3 chấm setting
-                  onPressed: () {
-                    _showPostActions(context);
-                  },
-                ),
+                /// ---------- MORE ICON ----------
+                /// Chỉ hiện nút 3 chấm nếu post là của chính mình
+                if (AppSession.instance.isMe(post.user?.id))
+                  IconButton(
+                    icon: const Icon(Icons.more_horiz), // icon 3 chấm setting
+                    onPressed: () {
+                      _showPostActions(context); // mở bottom sheet chọn sửa/xóa
+                    },
+                  ),
               ],
             ),
 
@@ -174,7 +176,7 @@ class _PostItemState extends State<PostItem> {
                       backgroundColor: Colors.black,
                       insetPadding: EdgeInsets.zero,
                       child: InteractiveViewer( // zoom ảnh
-                        child: Image.network( // ảnh thông qua url 
+                        child: Image.network( // ảnh thông qua url
                           post.photos.first.photo,
                           fit: BoxFit.contain,
                         ),
@@ -195,7 +197,7 @@ class _PostItemState extends State<PostItem> {
             const SizedBox(height: 8),
 
             /// ================= REACTION COUNT =================
-            if (totalReactions > 0) // reaction >0 mới hiện
+            if (totalReactions > 0) // reaction > 0 mới hiện
               Text(
                 '$totalReactions reactions',
                 style: const TextStyle(
@@ -237,11 +239,11 @@ class _PostItemState extends State<PostItem> {
                   icon: Icons.comment_outlined,
                   label: 'Comment',
                   onTap: () {
-                    showModalBottomSheet( // tạo khung modal dưới lên 
+                    showModalBottomSheet( // tạo khung modal dưới lên
                       context: context,
-                      isScrollControlled: true, // có thể scroll 
-                      backgroundColor: Colors.transparent, //background
-                      builder: (_) => CommentSheet( postId: post.id!),  // build giao diện load ra cmt bên trong
+                      isScrollControlled: true, // có thể scroll
+                      backgroundColor: Colors.transparent, // background
+                      builder: (_) => CommentSheet(postId: post.id!), // build giao diện load ra cmt bên trong
                     );
                   },
                 ),
@@ -253,13 +255,29 @@ class _PostItemState extends State<PostItem> {
     );
   }
 
+  /// ================= BOTTOM SHEET: CHỌN SỬA HOẶC XÓA =================
   void _showPostActions(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      builder: (_) => SafeArea( // nằm an toàn 
+      builder: (_) => SafeArea( // nằm an toàn tránh notch và thanh điều hướng
         child: Column(
-          mainAxisSize: MainAxisSize.min, // nầm trong column vừa đủ
+          mainAxisSize: MainAxisSize.min, // nằm trong column vừa đủ
           children: [
+
+            /// ---------- NÚT SỬA ----------
+            ListTile(
+              leading: const Icon(Icons.edit, color: Colors.blue),
+              title: const Text(
+                'Sửa bài viết',
+                style: TextStyle(color: Colors.blue),
+              ),
+              onTap: () {
+                Navigator.pop(context); // đóng bottom sheet trước rồi mới mở dialog
+                _showEditDialog(context); // mở dialog nhập nội dung mới
+              },
+            ),
+
+            /// ---------- NÚT XÓA ----------
             ListTile(
               leading: const Icon(Icons.delete, color: Colors.red),
               title: const Text(
@@ -268,7 +286,7 @@ class _PostItemState extends State<PostItem> {
               ),
               onTap: () async {
                 Navigator.pop(context);
-                await _deletePost(context); // goij hàm xóa
+                await _deletePost(context); // gọi hàm xóa
               },
             ),
           ],
@@ -277,10 +295,86 @@ class _PostItemState extends State<PostItem> {
     );
   }
 
+  /// ================= DIALOG NHẬP NỘI DUNG SỬA =================
+  void _showEditDialog(BuildContext context) {
+    // TextEditingController khởi tạo sẵn nội dung cũ của post để user không phải nhập lại từ đầu
+    final titleController = TextEditingController(text: post.title);
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Sửa bài viết'),
+        content: TextField(
+          controller: titleController, // gắn controller vào ô nhập để lấy giá trị
+          maxLines: 4, // cho phép nhập nhiều dòng như post thật
+          decoration: const InputDecoration(
+            hintText: 'Nhập nội dung mới...',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+
+          /// NÚT HỦY → đóng dialog không làm gì
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              'Hủy',
+              style: TextStyle(color: Colors.grey),
+            ),
+          ),
+
+          /// NÚT LƯU → gọi API cập nhật
+          ElevatedButton(
+            onPressed: () async {
+              final newTitle = titleController.text.trim(); // xóa khoảng trắng 2 đầu
+
+              if (newTitle.isEmpty) return; // không cho lưu nếu rỗng
+
+              Navigator.pop(context); // đóng dialog trước
+              await _editPost(context, newTitle); // gọi hàm gọi API sửa
+            },
+            child: const Text('Lưu'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// ================= GỌI API SỬA POST =================
+  Future<void> _editPost(BuildContext context, String newTitle) async {
+    try {
+      final updatedPost = await widget._postController.editPost(
+        post.id!, // id post cần sửa
+        newTitle,  // nội dung title mới
+      );
+
+      setState(() {
+        post = updatedPost; // cập nhật lại state để UI tự render lại với nội dung mới
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Đã cập nhật bài viết'),
+          backgroundColor: Colors.green, // xanh = thành công
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cập nhật thất bại'),
+          backgroundColor: Colors.red, // đỏ = thất bại
+        ),
+      );
+    }
+  }
+
+  /// ================= GỌI API XÓA POST =================
   Future<void> _deletePost(BuildContext context) async {
     try {
-      await widget._postController.delPost(post.id!); // xóa ngay ra khỏi widget 
-      widget.onDelete?.call(); // gọi lại xóa post khỏi list trong thằng feed cha và load lại, nếu không null sẽ chạy, null thì k chạy.// Logic là ấn xóa, gọi api xóa, gọi ondelete.call() tới th cha, th cha lấy id post và xóa ui 
+      await widget._postController.delPost(post.id!); // xóa ngay ra khỏi widget
+      widget.onDelete?.call(); // gọi lại xóa post khỏi list trong thằng feed cha và load lại
+      // nếu không null sẽ chạy, null thì k chạy
+      // Logic là ấn xóa, gọi api xóa, gọi ondelete.call() tới th cha, th cha lấy id post và xóa ui
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Đã xóa bài viết')),
       );
@@ -291,8 +385,8 @@ class _PostItemState extends State<PostItem> {
     }
   }
 
-  /// GỌI API REACT 
-  Future<void> _react(BuildContext context, String type) async { // hàm bát đồng bộ, build context để show snackbar 
+  /// ================= GỌI API REACT =================
+  Future<void> _react(BuildContext context, String type) async { // hàm bất đồng bộ, build context để show snackbar
     try {
       final reactionCounts =
           await widget._functionController.reactPost( // gọi controller để gọi api và nhận dữ liệu gán cho reaction count
@@ -306,37 +400,36 @@ class _PostItemState extends State<PostItem> {
         /// toggle trạng thái user
         if (post.userIsReaction == type) { // nếu có user thả react thì gán k thì thôi
           post.userIsReaction = null;
-        } 
-        else {
+        } else {
           post.userIsReaction = type;
         }
       });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar( // thanh thông báo nhận resonpse
+      ScaffoldMessenger.of(context).showSnackBar( // thanh thông báo nhận response
         SnackBar(content: Text(e.toString())),
       );
     }
   }
 
-  /// ACTION BUTTON (LIKE / LOVE / COMMENT)
-  Widget _actionButton({ // hàm build button để dùng chug
+  /// ================= ACTION BUTTON (LIKE / LOVE / COMMENT) =================
+  Widget _actionButton({ // hàm build button để dùng chung
     required IconData icon, // yêu cầu icon truyền vào
-    required String label, // ycau label
+    required String label, // yêu cầu label
     bool active = false,
     Color activeColor = Colors.blue, // màu khi kích hoạt
     required VoidCallback onTap, // ontap chuyển màu
   }) {
-    final color = active ? activeColor : Colors.grey;
+    final color = active ? activeColor : Colors.grey; // đổi màu theo trạng thái active
 
-    return InkWell( // widget tạo hiệu ứng chạm,bắt sự kiện tap
+    return InkWell( // widget tạo hiệu ứng chạm, bắt sự kiện tap
       borderRadius: BorderRadius.circular(6),
       onTap: onTap, // bắt sự kiện ontap
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6), // trên dưới 6, phải trái 8 
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6), // trên dưới 6, phải trái 8
         child: Row(
           children: [
             Icon(icon, size: 20, color: color),
-            const SizedBox(width: 4), // khoảng cách
+            const SizedBox(width: 4), // khoảng cách giữa icon và text
             Text(
               label,
               style: TextStyle(color: color),

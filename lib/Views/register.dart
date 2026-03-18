@@ -34,7 +34,7 @@ class _RegisterState extends State<Register> {
           child: SingleChildScrollView( // có thể scroll khi bàn phím bật lên
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Card( //card chưas form
-              elevation: 20, // đổ bóng 
+              elevation: 20, // đổ bóng
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20), // màn hình bo góc
               ),
@@ -42,7 +42,7 @@ class _RegisterState extends State<Register> {
                 padding: const EdgeInsets.all(24), // đặt left right top bottom là 24 px
                 child: Form( // trong card chứa form
                   key: _formKey, // chạy validate
-                  child: Column( // dạng hàng để chứa các phần tử con theo hàng 
+                  child: Column( // dạng hàng để chứa các phần tử con theo hàng
                     mainAxisSize: MainAxisSize.min, // hộp co giãn chỉ đủ chứa đủ các phần tử con
                     children: [
                       const Icon(Icons.person_add_alt_1,
@@ -57,7 +57,7 @@ class _RegisterState extends State<Register> {
                       ),
                       const SizedBox(height: 20),
 
-                      _input(//
+                      _input(
                         label: "First name",
                         icon: Icons.person,
                         controller: controller.firstName,
@@ -95,6 +95,8 @@ class _RegisterState extends State<Register> {
                         label: "Date of birth",
                         icon: Icons.cake,
                         controller: controller.birth,
+                        readOnly: true, // không cho nhập tay
+                        onTap: () => controller.pickBirthDate(context), // mở DatePicker
                       ),
 
                       _input(
@@ -147,7 +149,7 @@ class _RegisterState extends State<Register> {
                             padding: EdgeInsets.zero, // không thụt padding nữa
                           ),
                           onPressed: () {
-                            if (_formKey.currentState!.validate()) {// dùng validate tất cả thằng cần validate, đúng hết mới start regis
+                            if (_formKey.currentState!.validate()) { // dùng validate tất cả thằng cần validate, đúng hết mới start regis
                               controller.startRegister(context);
                             }
                           },
@@ -197,6 +199,8 @@ class _RegisterState extends State<Register> {
     required IconData icon,
     required TextEditingController controller,
     bool obscure = false,
+    bool readOnly = false,          // không cho nhập tay (dùng cho DatePicker)
+    VoidCallback? onTap,            // callback khi tap vào field
     TextInputType keyboard = TextInputType.text,
     Widget? suffix,
     String? Function(String?)? validator,
@@ -207,6 +211,8 @@ class _RegisterState extends State<Register> {
         controller: controller,
         obscureText: obscure,
         keyboardType: keyboard,
+        readOnly: readOnly,          // không cho nhập tay
+        onTap: onTap,                // mở DatePicker khi tap
         validator: validator,
         decoration: InputDecoration(
           labelText: label,
